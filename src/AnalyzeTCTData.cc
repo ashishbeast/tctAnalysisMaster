@@ -606,7 +606,9 @@ void AnalyzeTCTData::PlotAxisSweep(Int_t operation)
   
   Int_t i, v=0, *s[5];
   Int_t pX, dpX;
-  TString xTitle, yTitle;
+  TString xTitle;
+  TString yTitle[4] = {"Charge (fC)", "Amplitude (mV)", "Rise Time (ns)", "CFD_{50%} (ns)"};
+  TString mode[4] = {"Charge", "Amplitude", "RiseTime", "CFD"};
   
   switch(operation)
     {
@@ -636,12 +638,22 @@ void AnalyzeTCTData::PlotAxisSweep(Int_t operation)
       xTitle = "V_{bias} (V)";
       break;
     }
-  
-  Float_t charge[pX];
-  Float_t amplitude[pX];
+
+  Float_t **yAxis =  new Float_t*[4];
+  Float_t **yAxisError =  new Float_t*[4];
+
+  for(Int_t k =0;k < 4;++k)
+    {
+      yAxis[k] = new Float_t[pX];
+      yAxisError[k] = new Float_t[pX];
+    }
+  TGraphErrors *gr[4];
   Float_t steps[pX];
-  Float_t chargeError[pX];
-  Float_t ampError[pX];
+ 
+  // Float_t charge[pX];
+  // Float_t amplitude[pX];
+  // Float_t chargeError[pX];
+  // Float_t ampError[pX];
   
   for(Int_t iCh = 0; iCh<_nAC; ++iCh)
     {
@@ -649,38 +661,41 @@ void AnalyzeTCTData::PlotAxisSweep(Int_t operation)
 	{
 	  _index = _tct->GetIndex(*s[0], *s[1], *s[2], *s[3], *s[4]);
 	  
-	  charge[i] = _sigCharge[iCh][_index];
-	  amplitude[i] = _sigAmplitude[iCh][_index];
-	  chargeError[i] = _sigChargeError[iCh][_index];
-	  ampError[i] = _sigAmplitudeError[iCh][_index];
+	  // charge[i] = _sigCharge[iCh][_index];
+	  // chargeError[i] = _sigChargeError[iCh][_index];
+	  // amplitude[i] = _sigAmplitude[iCh][_index];
+	  // ampError[i] = _sigAmplitudeError[iCh][_index];
+
+	  yAxis[0][i] = _sigCharge[iCh][_index];
+	  yAxis[1][i] = _sigAmplitude[iCh][_index];
+	  yAxis[2][i] = _sigRiseTime[iCh][_index];
+	  yAxis[3][i] = _sigCFD[iCh][_index][5];
+
+	  yAxisError[0][i] =  _sigChargeError[iCh][_index];
+	  yAxisError[1][i] = _sigAmplitudeError[iCh][_index];
+	  yAxisError[2][i] = 0;
+	  yAxisError[3][i] = 0;
+	  
 	  steps[i] = dpX*i;
 	}
       
-      TGraphErrors *gr = new TGraphErrors(pX, steps, charge, 0, chargeError);
-      TGraphErrors *hr = new TGraphErrors(pX, steps, amplitude, 0, ampError);
-      
-      _canvas = new TCanvas("","Sweep Measurement", 1800, 800);
-      _canvas->Divide(2,1);
-      _canvas->cd(1);
-      gr->Draw("apl");
-      gr->SetMarkerSize(1.5);
-      gr->SetMarkerStyle(20);
-      gr->SetMarkerColor(kBlack);
-      gr->SetLineColor(kRed);
-      gr->GetXaxis()->SetTitle(xTitle);
-      gr->GetYaxis()->SetTitle("Charge [fC]");
-      
-      _canvas->cd(2);
-      hr->Draw("apl");
-      hr->SetMarkerSize(1.5);
-      hr->SetMarkerStyle(20);
-      hr->SetMarkerColor(kBlack);
-      hr->SetLineColor(kRed);
-      hr->GetXaxis()->SetTitle(xTitle);
-      hr->GetYaxis()->SetTitle("Amplitude [mV]");
-      
-      Save(_canvas, Form("_Sweep_CH%d", _aCH[iCh]), ".png" );
-      delete _canvas;
+      // TGraphErrors *gr = new TGraphErrors(pX, steps, charge, 0, chargeError);
+      // TGraphErrors *hr = new TGraphErrors(pX, steps, amplitude, 0, ampError);
+
+      for(Int_t k =0; k<4;++k)
+	{
+	  _canvas = new TCanvas("","Sweep Measurement", 1200, 1000);
+	  gr[k] = new TGraphErrors(pX, steps, &yAxis[k][0], 0, &yAxisError[k][0]);
+	  gr[k]->Draw("apl");
+	  gr[k]->SetMarkerSize(1.5);
+	  gr[k]->SetMarkerStyle(20);
+	  gr[k]->SetMarkerColor(kBlack);
+	  gr[k]->SetLineColor(kRed);
+	  gr[k]->GetXaxis()->SetTitle(xTitle);
+	  gr[k]->GetYaxis()->SetTitle(yTitle[k]);
+	  Save(_canvas, Form("_SweepMode%d_CH%d", k, _aCH[iCh]), ".png" );
+	  delete _canvas;
+	}
     }
   cout<<"[MESSAGE] Finished Plotting Axis(X, Y, X, V1, V2) Sweep!!!\n";
   return;
