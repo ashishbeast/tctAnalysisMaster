@@ -49,6 +49,8 @@ public:
 
   Float_t CalcCFD(TH1F *his, Float_t thr);  // Calculation of the CFD threhsold crossing
 
+  Float_t CalcTOA(TH1F *his);  // Calculation of the Time of Arrival of signal
+
   Float_t CalcTOT(TH1F *his, Float_t thr);  // Calculation of the time over threshold
 
   Float_t CalcCharge(TH1F*, Float_t*);   //Calculation of the integral of the signal

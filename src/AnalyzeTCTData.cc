@@ -270,8 +270,8 @@ void AnalyzeTCTData::CalcNoise()
 	right = signal->GetXaxis()->FindBin(_tA);
 	
 	for(Int_t k = left; k< right; ++k)
-        sumD2 += pow(signal->GetBinContent(k) - mean, 2);
-    }
+	  sumD2 += pow(signal->GetBinContent(k) - mean, 2);
+      }
   Float_t mu2 = sumD2 / (N - 1); // second central moment (variance)
   Float_t stdDev = sqrt(mu2); //std Dev
   _noise = stdDev;
@@ -413,7 +413,9 @@ Float_t AnalyzeTCTData::CalcCharge(TH1F *his, Float_t* error)
   charge = his->IntegralAndError(minTime, maxTime, err, "");
   charge /= _termination;
   *error = (err/_termination);
-  return charge;
+  if(charge < 0)
+    return 0;
+ return charge;
 }
 
 Float_t AnalyzeTCTData::CalcCharge(Int_t channel, Int_t x, Int_t y, Int_t z, Int_t v1, Int_t v2, Float_t *error)
@@ -461,7 +463,7 @@ Float_t AnalyzeTCTData::CalcRiseTime(TH1F* his)
   t1 = LinearInterpolation(xData, yData, 0.2*maxAmp);
   t2 = LinearInterpolation(xData, yData, 0.8*maxAmp);
 
-  if((t2-t1) < 0 || (t2-t1) > 2)
+  if((t2-t1) < 0 || (t2-t1) > 1)
     return 0;
   
   xData.clear();
@@ -497,37 +499,46 @@ Float_t AnalyzeTCTData::CalcCFD(TH1F *his, Float_t thr)
   return t;
 }
 
+Float_t AnalyzeTCTData::CalcTOA(TH1F *his)
+{
+  Float_t t = CalcCFD(his, 20);
+  
+  if(t<0 || t>2)
+    return 0;
+  return t;
+}
+
 Float_t AnalyzeTCTData::CalcTOT(TH1F *his, Float_t thr)
 {
-    //Check Threshold
-    if(thr > 1)
-        thr /= 100;
+  //Check Threshold
+  if(thr > 1)
+    thr /= 100;
 
-    Float_t t1 = CalcCFD(his, thr);
-    Float_t t2;
+  Float_t t1 = CalcCFD(his, thr);
+  Float_t t2;
     
-    vector<Float_t> xData;
-    vector<Float_t> yData;
+  vector<Float_t> xData;
+  vector<Float_t> yData;
 
-    for(Int_t i=0; i<_tct->nPoints; ++i)
+  for(Int_t i=0; i<_tct->nPoints; ++i)
     {
       xData.push_back(his->GetXaxis()->GetBinCenter(i+1));
       yData.push_back(his->GetBinContent(i+1));
     }
 
-    //search -> no point above the threshold found
-    //check -> found point above threshold and checking for TOT
-    enum state {search, check};
+  //search -> no point above the threshold found
+  //check -> found point above threshold and checking for TOT
+  enum state {search, check};
 
-    state status = search;
+  state status = search;
     
-    unsigned int abovePos = 0; //Index of the Point above Threshold
+  unsigned int abovePos = 0; //Index of the Point above Threshold
   
-    for(unsigned int i = 0; i< yData.size(); ++i)
+  for(unsigned int i = 0; i< yData.size(); ++i)
     {
-        if(status == search)
+      if(status == search)
         {
-            if(yData[i] > thr)
+	  if(yData[i] > thr)
             {
               abovePos = i;
               status = check;
@@ -535,30 +546,32 @@ Float_t AnalyzeTCTData::CalcTOT(TH1F *his, Float_t thr)
         }
         
       if(status == check)
-      {
-        if(yData[i] >  thr)
+	{
+	  if(yData[i] >  thr)
             continue;
           else
-              status = search;
+	    status = search;
           
           if(yData[i] < thr)
-              break;
-      }
+	    break;
+	}
     }
 
-    if(abovePos == 0 || abovePos == yData.size()-1)
-        return t1;
+  if(abovePos == 0 || abovePos == yData.size()-1)
+    return t1;
   Float_t y1 = yData[abovePos];
   Float_t y2 = yData[abovePos - 1];
   Float_t x1 = xData[abovePos];
   Float_t x2 = xData[abovePos - 1];
-  //xData.clear();
-  //yData.clear();
+  xData.clear();
+  yData.clear();
 
   Float_t a = (y2-y1)/(x2-x1);
   Float_t b = y1 - a*x1;
   t2 = (thr - b)/a;
-  
+
+  if((t2 - t1) < 0 || (t2 - t1) > 5)
+    return 0;
   return t2-t1;
 }
 
@@ -627,7 +640,6 @@ void AnalyzeTCTData::PlotAxisSweep(Int_t operation)
   Float_t charge[pX];
   Float_t amplitude[pX];
   Float_t steps[pX];
-  Float_t errX[pX];
   Float_t chargeError[pX];
   Float_t ampError[pX];
   
@@ -641,12 +653,11 @@ void AnalyzeTCTData::PlotAxisSweep(Int_t operation)
 	  amplitude[i] = _sigAmplitude[iCh][_index];
 	  chargeError[i] = _sigChargeError[iCh][_index];
 	  ampError[i] = _sigAmplitudeError[iCh][_index];
-        errX[i] = 0;
 	  steps[i] = dpX*i;
 	}
       
-      TGraphErrors *gr = new TGraphErrors(pX, steps, charge, errX, chargeError);
-      TGraphErrors *hr = new TGraphErrors(pX, steps, amplitude, errX, ampError);
+      TGraphErrors *gr = new TGraphErrors(pX, steps, charge, 0, chargeError);
+      TGraphErrors *hr = new TGraphErrors(pX, steps, amplitude, 0, ampError);
       
       _canvas = new TCanvas("","Sweep Measurement", 1800, 800);
       _canvas->Divide(2,1);
@@ -968,55 +979,55 @@ void AnalyzeTCTData::SetCanvasSettings(Bool_t threeD = false)
 
 
 /*
-Bool_t AnalyzeTCTData::FindWFShift()
-{
+  Bool_t AnalyzeTCTData::FindWFShift()
+  {
   printf("[ STATUS] Finding signal start Time (%d Waveforms).... \n",_tct->_totEvents);
   
   Float_t maxAmp=0, amplitude, time;
   TH1F *signal, *maxSignal;
   
   for(Int_t i=0;i<_tct->_totEvents; ++i)
-    {
-      for(Int_t j=0; j<_nAC; ++j)
-	{
-	  _histo[j] = ((TH1F*) _tct->_ch[_aCH[j]]->At(i));
+  {
+  for(Int_t j=0; j<_nAC; ++j)
+  {
+  _histo[j] = ((TH1F*) _tct->_ch[_aCH[j]]->At(i));
 	  
-	  signal = (TH1F*)_histo[j]->Clone();
-	  signal->Scale(_polarity);
+  signal = (TH1F*)_histo[j]->Clone();
+  signal->Scale(_polarity);
 	  
-	  if(signal->GetMaximum() > maxAmp)
-	    {
-	      maxAmp = signal->GetMaximum();
-	      maxSignal = (TH1F*)signal->Clone();
-	      _indexMaxSignal = i;
-	      _chMaxSignal = j;
-	    }
-	}
-    }
+  if(signal->GetMaximum() > maxAmp)
+  {
+  maxAmp = signal->GetMaximum();
+  maxSignal = (TH1F*)signal->Clone();
+  _indexMaxSignal = i;
+  _chMaxSignal = j;
+  }
+  }
+  }
     
   for(Int_t i=0; i< _tct->nPoints; ++i)
-    {
-      amplitude = maxSignal->GetBinContent(i+1);
-      time = _tct->t0 + i*_tct->dt;
-      if(amplitude > maxAmp*0.2)
-	{
-	  _tA = (time/1e-9)-2; //2ns before the 20% of Max Signal
-	  printf("[   INFO] : Start of the Signal at %f ns\n", _tA);
-	  return true;
-	}
-    }
+  {
+  amplitude = maxSignal->GetBinContent(i+1);
+  time = _tct->t0 + i*_tct->dt;
+  if(amplitude > maxAmp*0.2)
+  {
+  _tA = (time/1e-9)-2; //2ns before the 20% of Max Signal
+  printf("[   INFO] : Start of the Signal at %f ns\n", _tA);
+  return true;
+  }
+  }
   _tA = 0.;
   return false;
-}
+  }
 */
 
 /*
-void AnalyzeTCTData::CorrectBaseline()
-{
+  void AnalyzeTCTData::CorrectBaseline()
+  {
   
-    // Function corrects the baseline (DC offset) of all wafeforms
-    // Float_T_t tA ; time denoting the start of the pulse 
-    // correction factor is calculated from all the bins before tA 
+  // Function corrects the baseline (DC offset) of all wafeforms
+  // Float_T_t tA ; time denoting the start of the pulse 
+  // correction factor is calculated from all the bins before tA 
   
   
   Int_t *right = new Int_t [_tct->_nCH];
@@ -1025,42 +1036,42 @@ void AnalyzeTCTData::CorrectBaseline()
   TH1F **his = new TH1F*[_tct->_nCH];
   
   for(Int_t i=0; i<_tct->_totEvents; ++i)
-    {
-      if(i==0)
-	printf("[ STATUS] Initiating Baseline correction (%d Waveforms).... \n",_tct->_totEvents);
+  {
+  if(i==0)
+  printf("[ STATUS] Initiating Baseline correction (%d Waveforms).... \n",_tct->_totEvents);
 
-      for(Int_t j = 0; j<_tct->_nCH; ++j)
-	if(_tct->_chStatus[j])
-	  his[j]=((TH1F *)_tct->_ch[j]->At(i));
+  for(Int_t j = 0; j<_tct->_nCH; ++j)
+  if(_tct->_chStatus[j])
+  his[j]=((TH1F *)_tct->_ch[j]->At(i));
       
-      for(Int_t j=0;j<_tct->_nCH; ++j)
-	{
-	  if(_tct->_chStatus[j])
-	    {
-	      right[j] = his[j]->GetXaxis()->FindBin(_tA);
-	      left[j] = 1;
-	      his[j]->Integral(left[j],right[j]);
-	      corr[j]=his[j]->Integral(left[j],right[j])/(right[j]-left[j]);
-	    }
-	}
+  for(Int_t j=0;j<_tct->_nCH; ++j)
+  {
+  if(_tct->_chStatus[j])
+  {
+  right[j] = his[j]->GetXaxis()->FindBin(_tA);
+  left[j] = 1;
+  his[j]->Integral(left[j],right[j]);
+  corr[j]=his[j]->Integral(left[j],right[j])/(right[j]-left[j]);
+  }
+  }
 
-      // if(i%100==0)
-      // 	printf("[ STATUS] Total Events Processed: %d\n", i); 
+  // if(i%100==0)
+  // 	printf("[ STATUS] Total Events Processed: %d\n", i); 
       
-      for(Int_t j=0; j < _tct->_nCH; ++j)
-	if(_tct->_chStatus[j])
-	  for(Int_t k=1; k < his[j]->GetNbinsX(); ++k)
-	    his[j]->SetBinContent(k,his[j]->GetBinContent(k)-corr[j]);
-    }
+  for(Int_t j=0; j < _tct->_nCH; ++j)
+  if(_tct->_chStatus[j])
+  for(Int_t k=1; k < his[j]->GetNbinsX(); ++k)
+  his[j]->SetBinContent(k,his[j]->GetBinContent(k)-corr[j]);
+  }
   delete[] right;
   delete[] left;
   delete[] corr;
   delete[] his;
   printf("[MESSAGE] Baseline Correction Finished!!! \n"); 
-}
+  }
 
-void AnalyzeTCTData::CalcNoise()
-{
+  void AnalyzeTCTData::CalcNoise()
+  {
   Int_t N = 0;
   Float_t mean = 0.;
   Float_t sum = 0;
@@ -1073,51 +1084,51 @@ void AnalyzeTCTData::CalcNoise()
   TH1F **his = new TH1F*[_tct->_nCH];
   
   for(Int_t i=0; i<_tct->_totEvents-1; ++i)
-    {
-      if(i==0)
-	printf("[ STATUS] Calculating the noise in the Baseline.... \n");
+  {
+  if(i==0)
+  printf("[ STATUS] Calculating the noise in the Baseline.... \n");
       
-      for(Int_t j = 0; j<_tct->_nCH; ++j)
-	if(_tct->_chStatus[j])
-	  his[j]=((TH1F *)_tct->_ch[j]->At(i));
+  for(Int_t j = 0; j<_tct->_nCH; ++j)
+  if(_tct->_chStatus[j])
+  his[j]=((TH1F *)_tct->_ch[j]->At(i));
       
-      for(Int_t j=0;j<_tct->_nCH; ++j)
-	{
-	  if(_tct->_chStatus[j])
-	    {
-	      signal = (TH1F*)his[j]->Clone();
-	      signal->Scale(_polarity);
-	      right[j] = signal->GetXaxis()->FindBin(_tA);
-	      left[j] = 1;
-	      for(Int_t k = left[j]; k< right[j]; ++k)
-		{
-		  sum += his[j]->GetBinContent(k);
-		  N++;
-		}
-	    }
-	}
-    }
+  for(Int_t j=0;j<_tct->_nCH; ++j)
+  {
+  if(_tct->_chStatus[j])
+  {
+  signal = (TH1F*)his[j]->Clone();
+  signal->Scale(_polarity);
+  right[j] = signal->GetXaxis()->FindBin(_tA);
+  left[j] = 1;
+  for(Int_t k = left[j]; k< right[j]; ++k)
+  {
+  sum += his[j]->GetBinContent(k);
+  N++;
+  }
+  }
+  }
+  }
   mean = sum / N ;
   for(Int_t i=0; i<_tct->_totEvents; ++i)
-    {
-      for(Int_t j = 0; j<_tct->_nCH; ++j)
-	if(_tct->_chStatus[j])
-	  his[j]=((TH1F *)_tct->_ch[j]->At(i));
+  {
+  for(Int_t j = 0; j<_tct->_nCH; ++j)
+  if(_tct->_chStatus[j])
+  his[j]=((TH1F *)_tct->_ch[j]->At(i));
       
-      for(Int_t j=0;j<_tct->_nCH; ++j)
-	{
-	  if(_tct->_chStatus[j])
-	    {
-	      right[j] = his[j]->GetXaxis()->FindBin(_tA);
-	      left[j] = 1;
-	      for(Int_t k = left[j]; k< right[j]; ++k)
-		{
-		  sumD2 += pow(his[j]->GetBinContent(i) - mean, 2);
-		  sumD4 += pow(his[j]->GetBinContent(i) - mean, 4);
-		}
-	    }
-	}
-    }
+  for(Int_t j=0;j<_tct->_nCH; ++j)
+  {
+  if(_tct->_chStatus[j])
+  {
+  right[j] = his[j]->GetXaxis()->FindBin(_tA);
+  left[j] = 1;
+  for(Int_t k = left[j]; k< right[j]; ++k)
+  {
+  sumD2 += pow(his[j]->GetBinContent(i) - mean, 2);
+  sumD4 += pow(his[j]->GetBinContent(i) - mean, 4);
+  }
+  }
+  }
+  }
 
   Float_t mu2 = sumD2 / (N - 1); // second central moment (variance)
     
@@ -1131,37 +1142,37 @@ void AnalyzeTCTData::CalcNoise()
   delete[] left;
   delete[] his;
   return;
-}
+  }
 */
 
 /*
-void AnalyzeTCTData::EstimateWFShift()
-{
+  void AnalyzeTCTData::EstimateWFShift()
+  {
   Float_t maxAmp, minAmp;
   Int_t maxAmpIndex;
   Float_t *maxAmplitude = new Float_t[_events];
   Float_t *minAmplitude = new Float_t[_events];
   
   for(Int_t j=0;j<_events; ++j)
-    {
-      _histo[0][j] = ((TH1F*) _tct->_ch[_aCH[0]]->At(j));
-      maxAmplitude[j] = _histo[0][j]->GetMaximum();
-      minAmplitude[j] = _histo[0][j]->GetMinimum();
-    }
+  {
+  _histo[0][j] = ((TH1F*) _tct->_ch[_aCH[0]]->At(j));
+  maxAmplitude[j] = _histo[0][j]->GetMaximum();
+  minAmplitude[j] = _histo[0][j]->GetMinimum();
+  }
 
   maxAmp = *max_element(maxAmplitude, maxAmplitude + _events);
   minAmp = *min_element(minAmplitude, minAmplitude + _events);
 
   if(TMath::Abs(minAmp) > TMath::Abs(maxAmp))
-    {
-      _polarity = -1;
-      maxAmpIndex = find(minAmplitude, minAmplitude + _events, minAmp) - minAmplitude;
-    }
+  {
+  _polarity = -1;
+  maxAmpIndex = find(minAmplitude, minAmplitude + _events, minAmp) - minAmplitude;
+  }
   else
-    {
-      _polarity = 1;
-      maxAmpIndex = find(maxAmplitude, maxAmplitude + _events, maxAmp) - maxAmplitude;
-    }
+  {
+  _polarity = 1;
+  maxAmpIndex = find(maxAmplitude, maxAmplitude + _events, maxAmp) - maxAmplitude;
+  }
 
   _histo[0][maxAmpIndex]->Scale(_polarity);
   
@@ -1170,5 +1181,5 @@ void AnalyzeTCTData::EstimateWFShift()
   delete[] maxAmplitude;
   delete[] minAmplitude;
   return;
-}
+  }
 */
