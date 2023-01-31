@@ -1,3 +1,4 @@
 #Ignore all the data Files
 *.tct
 .DS_Store
+*.png
