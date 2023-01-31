@@ -5,7 +5,7 @@ OBJDIR = obj
 EXECUTABLEDIR = bin
 
 # Compiler
-CC = g++
+CC = g++ -std=c++17
 CFLAGS = -c -g -Wall `root-config --cflags` -I$(INCLUDEDIR)
 
 # Linker

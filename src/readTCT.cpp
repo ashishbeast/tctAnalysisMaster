@@ -8,16 +8,17 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-  if(argc != 2)
+    if(argc < 2)
     {
-      cout<<"[WARNING] : \tUsage reaTCTFile fileName.tct\n";
-      return -1;
+        cout<<"[WARNING] : \tUsage reaTCTFile fileName.tct\n";
+        return -1;
     }
-
-  ReadTCTFile tct(argv[1], 0.);
-
-  //Print Headers
-  tct.Print();
-  
-  return 0;
+    
+    for(Int_t i = 1; i < argc; ++i)
+    {
+        ReadTCTFile tct(argv[1], 0.);
+        //Print Headers
+        tct.Print();
+    }
+    return 0;
 }
