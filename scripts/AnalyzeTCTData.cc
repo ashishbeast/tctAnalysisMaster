@@ -22,6 +22,7 @@ AnalyzeTCTData::AnalyzeTCTData(const char* inFile)
     _tmax = 20.;
     _noise = 0;
     _nAC = 0.;
+    _threshold = 8; // The maximum signal should be over 8 mV for a given data to consider the data consists a signal from the sensor
     
     _outFile += inFile;
     _outFile = _outFile.ReplaceAll(".tct", "");
@@ -227,6 +228,16 @@ Bool_t AnalyzeTCTData::FindWFShift()
     
     delete[] his;
     
+    if(maxAmp < _threshold)
+    {
+        printf("[   INFO] No Signal Found!!\n");
+        _tA = _tct->t0 + (_tct->nPoints * _tct->dt);
+        _isNoise = true;
+        return false;
+    }
+    
+    _isNoise = false;
+    
     for(Int_t i=0; i< _tct->nPoints; ++i)
     {
         amplitude = maxSignal->GetBinContent(i+1);
@@ -308,6 +319,15 @@ void AnalyzeTCTData::CalcNoise()
     Float_t mu2 = sumD2 / (N - 1); // second central moment (variance)
     Float_t stdDev = sqrt(mu2); //std Dev
     _noise = stdDev;
+    
+    if(_noise < 1)
+        _isAveraged = true;
+    else
+        _isAveraged = false;
+    
+    if(_isAveraged)
+        _noise *= sqrt(256);
+
     printf("[MESSAGE] Noise Estimation Finished ==> %f mV!!! \n", _noise);
     return;
 }
@@ -340,9 +360,10 @@ void AnalyzeTCTData::CalculateSignalProperties()
             _sigRiseTime[i][j] = CalcRiseTime(signal);
             _sigSlope[i][j] = CalcSlope(signal);
             _sigMaxSlope[i][j] = CalcMaxSlope(signal);
-            //_sigJitter[i][j] = _sigNoise[i][j]*_sigRiseTime[i][j]/(0.8*_sigAmplitude[i][j]);
-            //_sigJitter[i][j] = _sigNoise[i][j]/_sigSlope[i][j];
-            _sigJitter[i][j] = _noise/_sigMaxSlope[i][j];
+            //_sigJitter[i][j] = 1000 * _sigNoise[i][j]*_sigRiseTime[i][j]/(0.8*_sigAmplitude[i][j]);
+            //_sigJitter[i][j] = 1000 * _sigNoise[i][j]/_sigSlope[i][j];
+            _sigJitter[i][j] = 1000 * _noise/_sigMaxSlope[i][j];
+            //_sigJitter[i][j] = 1000 * _sigNoise[i][j]/_sigMaxSlope[i][j];
             _sigTOA[i][j] = CalcCFD(signal, 30);
             _sigTOT[i][j] = CalcTOT(signal, 30);
             for(Int_t k =0; k<9; ++k)
@@ -471,6 +492,9 @@ Float_t AnalyzeTCTData::CalcSignalNoise(TH1F* his)
     Float_t mu2 = sumD2 / (N - 1); // second central moment (variance)
     Float_t stdDev = sqrt(mu2); //std Dev
   
+    if(_isAveraged)
+        stdDev *= sqrt(256);
+
     return stdDev;
 }
 

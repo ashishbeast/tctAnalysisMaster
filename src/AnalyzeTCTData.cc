@@ -77,6 +77,7 @@ AnalyzeTCTData::AnalyzeTCTData(const char* inFile)
         _sigCharge     = new Float_t*[_nAC];
         _sigChargeError= new Float_t*[_nAC];
         _sigAmplitude  = new Float_t*[_nAC];
+        _SNR = new Float_t*[_nAC];
         _sigAmplitudeError = new Float_t*[_nAC];
         _sigRatio         = new Float_t*[_nAC];
         _sigRatioError    = new Float_t*[_nAC];
@@ -100,6 +101,7 @@ AnalyzeTCTData::AnalyzeTCTData(const char* inFile)
             _sigCharge[iCh]     = new Float_t[_events];
             _sigChargeError[iCh]= new Float_t[_events];
             _sigAmplitude[iCh]  = new Float_t[_events];
+            _SNR[iCh]  = new Float_t[_events];
             _sigAmplitudeError[iCh] = new Float_t[_events];
             _sigRatio[iCh]         = new Float_t[_events];
             _sigRatioError[iCh]    = new Float_t[_events];
@@ -308,20 +310,20 @@ void AnalyzeTCTData::CalcNoise()
     Int_t right, left=1;
     
     TH1F* signal;
-    
+
     for(Int_t i=0; i<_nAC; ++i)
         for(Int_t j=0;j<_events; ++j)
         {
             signal = (TH1F*) _histo[i][j]->Clone();
             signal->Scale(_polarity);
             right = signal->GetXaxis()->FindBin(_tA);
-            
             for(Int_t k = left; k< right; ++k)
             {
                 sum += signal->GetBinContent(k);
                 N++;
             }
         }
+    
     mean = sum / N ;
     
     for(Int_t i=0; i<_nAC; ++i)
@@ -343,10 +345,47 @@ void AnalyzeTCTData::CalcNoise()
     else
         _isAveraged = false;
     
-    if(_isAveraged)
-        _noise *= sqrt(256);
-    
     printf("[MESSAGE] Noise Estimation Finished ==> %f mV!!! \n", _noise);
+    if(_isAveraged)
+    {
+        _noise *= sqrt(256);
+        return;
+    }
+    
+    gStyle->SetOptStat(1);
+    gStyle->SetOptFit(1);
+    _canvas = new TCanvas("","Noise", 1200, 1000);
+    TH1F *noiseHist = new TH1F("noiseHist","",200,-10,10); //0.1 mV binWidth
+    for(Int_t i=0; i<_nAC; ++i)
+        for(Int_t j=0;j<_events; ++j)
+        {
+            signal = (TH1F*) _histo[i][j]->Clone();
+            signal->Scale(_polarity);
+            right = signal->GetXaxis()->FindBin(_tA);
+            for(Int_t k = left; k< right; ++k)
+                noiseHist->Fill(signal->GetBinContent(k));
+        }
+    
+    Float_t meanNoise = noiseHist->GetMean();
+    Float_t height = noiseHist->GetBinContent(noiseHist->GetMaximumBin());
+    Float_t stdD = noiseHist->GetStdDev();
+    
+    TF1 *Gaus = new TF1("Gaus", "[0]*TMath::Exp(-0.5*TMath::Power(((x-[1])/[2]),2))", -10, 10);
+    Gaus->SetLineColor(kBlue);
+    Gaus->SetLineWidth(3);
+    Gaus->SetParameters(height, meanNoise, stdD);
+    
+    noiseHist->Draw();
+    noiseHist->Fit("Gaus", "QRMS0");
+    Gaus->Draw("lsame");
+    noiseHist->GetXaxis()->SetTitle("Noise (mV)");
+    noiseHist->GetYaxis()->SetTitle("Counts");
+    noiseHist->SetLineColor(kRed);
+    noiseHist->SetLineWidth(3);
+    
+    Save(_canvas, "_NoiseHistogram", ".png");
+    _canvas = NULL;
+    delete _canvas;
     return;
 }
 
@@ -376,6 +415,7 @@ void AnalyzeTCTData::CalculateWaveformProperties()
             _sigNoise[i][j]    = CalcSignalNoise(signal);
             _sigCharge[i][j]    = CalcCharge(signal, &_sigChargeError[i][j]);
             _sigAmplitude[i][j] = CalcAmplitude(signal);
+            _SNR[i][j] = _sigAmplitude[i][j]/_sigNoise[i][j];
             _sigAmplitudeError[i][j] = _sigNoise[i][j];
             if(_sigCharge[i][j] == 0.)
             {
@@ -473,14 +513,16 @@ void AnalyzeTCTData::SaveSignalShape()
     //TH1F *his =  _tct->GetHisto(_chMaxSignal, _indexMaxSignal);
     
     TH1F *maxSignal = (TH1F*) _histo[0][_indexMaxSignal]->Clone();
+    maxSignal->Scale(_polarity);
     _canvas = new TCanvas("","Signal", 1200, 1000);
     TH1F *signal;
     for(Int_t j=0;j<_events; ++j)
     {
         signal = (TH1F*) _histo[0][j]->Clone();
+        signal->Scale(_polarity);
         if(j==0)
         {
-            signal->Draw("l");
+            signal->Draw("HIST L");
             signal->SetLineColor(kRed);
             signal->GetXaxis()->SetTitle("Time (ns)");
             signal->GetYaxis()->SetTitle("Voltage (mV)");
@@ -489,7 +531,7 @@ void AnalyzeTCTData::SaveSignalShape()
         }
         else
         {
-            signal->Draw("lsame");
+            signal->Draw("HIST LSAME");
             signal->GetYaxis()->SetRangeUser(maxSignal->GetMinimum()-5, maxSignal->GetMaximum()+5);
             signal->GetXaxis()->SetRangeUser(0, 20);
         }
@@ -498,6 +540,8 @@ void AnalyzeTCTData::SaveSignalShape()
     cout<<"[ STATUS] Saving Signal...\n";
     
     Save(_canvas, "_Signal", ".png");
+    _canvas = NULL;
+    delete _canvas;
     return;
 }
 
@@ -861,8 +905,9 @@ void AnalyzeTCTData::PlotAxisSweep(Int_t operation)
     Int_t i, v=0, *s[5];
     Int_t pX, dpX;
     TString xTitle;
-    TString yTitle[7] = { "Noise (mV)", "Charge (fC)", "Amplitude (mV)", "Rise Time (ns)", "CFD_{50%} (ns)", "Jitter (ps)", "Slew Rate(mV/ns)"};
-    TString mode[7] = {"Noise", "Charge", "Amplitude", "RiseTime", "CFD", "Jitter", "Slew Rate"};
+    TString yTitle[8] = { "Noise (mV)", "Charge (fC)", "Amplitude (mV)", "Rise Time (ns)", "CFD_{50%} (ns)", "Jitter (ps)", "Slew Rate(mV/ns)", "SNR"};
+    //TString mode[8] = {"Noise", "Charge", "Amplitude", "RiseTime", "CFD", "Jitter", "SlewRate", "SNR"};
+    const char* mode[8] = {"Noise", "Charge", "Amplitude", "RiseTime", "CFD", "Jitter", "SlewRate", "SNR"};
     
     switch(operation)
     {
@@ -893,15 +938,15 @@ void AnalyzeTCTData::PlotAxisSweep(Int_t operation)
             break;
     }
     
-    Float_t **yAxis =  new Float_t*[7];
-    Float_t **yAxisError =  new Float_t*[7];
+    Float_t **yAxis =  new Float_t*[8];
+    Float_t **yAxisError =  new Float_t*[8];
     
-    for(Int_t k =0;k < 7;++k)
+    for(Int_t k =0;k < 8;++k)
     {
         yAxis[k] = new Float_t[pX];
         yAxisError[k] = new Float_t[pX];
     }
-    TGraphErrors *gr[7];
+    TGraphErrors *gr[8];
     Float_t steps[pX];
     
     for(Int_t iCh = 0; iCh<_nAC; ++iCh)
@@ -924,6 +969,7 @@ void AnalyzeTCTData::PlotAxisSweep(Int_t operation)
                 yAxis[4][i] = _sigCFD[iCh][_index][5];
                 yAxis[5][i] = _sigJitter[iCh][_index];
                 yAxis[6][i] = _sigSlewRate[iCh][_index];
+                yAxis[7][i] = _SNR[iCh][_index];
                 
                 yAxisError[0][i] = 0;
                 yAxisError[1][i] = _sigChargeError[iCh][_index];
@@ -932,6 +978,7 @@ void AnalyzeTCTData::PlotAxisSweep(Int_t operation)
                 yAxisError[4][i] = 0;
                 yAxisError[5][i] = 0;
                 yAxisError[6][i] = 0;
+                yAxisError[7][i] = 0;
                 
             }
             steps[i] = dpX*i;
@@ -944,7 +991,7 @@ void AnalyzeTCTData::PlotAxisSweep(Int_t operation)
         if(_isNoise)
             graphNumbers = 1;
         else
-            graphNumbers = 7;
+            graphNumbers = 8;
         
         for(Int_t k =0; k< graphNumbers;++k)
         {
@@ -959,7 +1006,9 @@ void AnalyzeTCTData::PlotAxisSweep(Int_t operation)
             gr[k]->GetYaxis()->SetTitle(yTitle[k]);
             if(k==3)
                 gr[k]->GetYaxis()->SetRangeUser(0,5);
-            Save(_canvas, Form("_SweepMode%d_CH%d", k, _aCH[iCh]), ".png" );
+            //Save(_canvas, Form("_SweepMode%d_CH%d", k, _aCH[iCh]), ".png" );
+            Save(_canvas, Form("_CH%d_%s", _aCH[iCh], mode[k]), ".png" );
+            _canvas = NULL;
             delete _canvas;
         }
     }
@@ -1207,6 +1256,7 @@ void AnalyzeTCTData::GetFocus()
     pt->Draw("");
     
     Save(_canvas, Form("_Focus_CH%d", _aCH[0]), ".png" );
+    _canvas = NULL;
     delete _canvas;
     //PlotMaps(operation);
     cout<<"[MESSAGE] Finished finding focus of the LASER!!!\n";

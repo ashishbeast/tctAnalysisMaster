@@ -116,6 +116,9 @@ public:
     Int_t _events;
     
     Int_t _nX, _nY, _nZ, _nV1, _nV2;
+    Float_t _threshold;
+    Bool_t _isNoise;
+    Bool_t _isAveraged;
     
     Bool_t _bmON = false;
     
@@ -135,6 +138,7 @@ public:
     Float_t** _sigMaxSlope;
     Float_t** _sigJitter;
     Float_t** _sigTOA;
+    Float_t** _sigTOT;
     Float_t*** _sigCFD;
     Float_t** _sigNormCharge;
     Float_t** _sigNormAmplitude;

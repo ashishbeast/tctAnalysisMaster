@@ -60,26 +60,20 @@ int main()
         
         Int_t nV = lgad._nV1; //Number of Voltage points for LGAD
         Int_t step = TMath::Abs(lgad._tct->V1[1]-lgad._tct->V1[0]);
-        Int_t reduce = 60/step +1;
+        //Int_t reduce = 60/step +1;
+        //cout<<Form("Voltage Steps: %d \t steps: %d V\t reduce:%d", nV, step, reduce)<<endl;
+        //Int_t arrS = ((nV-1) * step)/10 - reduce;
         
-        cout<<Form("Voltage Steps: %d \t steps: %d V\t reduce:%d", nV, step, reduce)<<endl;
-        
-        Int_t arrS = ((nV-1) * step)/10 - reduce;
+        Int_t arrS = (nV-20)/10 + 1;
         
         Float_t jitter[arrS];
         Float_t err[arrS];
         Float_t voltage[arrS];
     
-        for(Int_t i=reduce; i<=nV; ++i)
+        for(Int_t i=20; i<nV; i+=10)
         {
-            if(i*step % 10 == 0)
-                continue;
-            voltage[i-reduce] = i*step;
-            jitter[i-reduce] = 1000*(lgad._sigJitter[0][i]);
-            
-            //jitter[i-20] = 1000*(lgad._sigNoise[0][i] * lgad._sigRiseTime[0][i])/(0.8*lgad._sigAmplitude[0][i]);
-            //jitter[i-20] = 1000*(lgad._noise * TMath::Sqrt(256) / lgad._sigMaxSlope[0][i]);
-            //jitter[i-20] = 1000*(lgad._sigNoise[0][i] * TMath::Sqrt(256) / lgad._sigSlope[0][i]);
+            voltage[(i-20)/10] = i*step;
+            jitter[(i-20)/10] = lgad._sigJitter[0][i];
         }
         
         TGraphErrors *gr = new TGraphErrors(arrS,voltage,jitter,0,0);
@@ -98,8 +92,8 @@ int main()
         }
         else
             gr->Draw("plsame");
-        gr->GetYaxis()->SetRangeUser(0,80);
-        gr->GetXaxis()->SetRangeUser(0,520);
+        gr->GetYaxis()->SetRangeUser(0,500);
+        //gr->GetXaxis()->SetRangeUser(0,520);
         leg->AddEntry(gr, legend, "epl");
     }
     leg->Draw();

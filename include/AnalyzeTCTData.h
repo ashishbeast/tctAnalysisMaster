@@ -132,6 +132,7 @@ public:
     Float_t** _sigCharge;
     Float_t** _sigChargeError;
     Float_t** _sigAmplitude;
+    Float_t** _SNR;
     Float_t** _sigAmplitudeError;
     Float_t** _sigRatio;
     Float_t** _sigRatioError;
