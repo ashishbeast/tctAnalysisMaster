@@ -8,21 +8,21 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-    if(argc < 2)
+  if(argc < 2)
     {
-        cout<<"[WARNING] : \tUsage: ./analyseTCT fileName.tct \n";
-        return -1;
+      cout<<"[WARNING] : \tUsage: ./analyseTCT fileName.tct \n";
+      return -1;
     }
     
-    //Read and Analyze the file
-    for(Int_t i = 1; i < argc; ++i)
+  //Read and Analyze the file
+  for(Int_t i = 1; i < argc; ++i)
     {
-        AnalyzeTCTData tct(argv[i]);
-        tct.CorrectBaseline();
-        tct.CalcNoise();
-        tct.CalculateWaveformProperties();
-        tct.SaveSignalShape();
-        tct.AnalysisAction();
+      AnalyzeTCTData *tct = new AnalyzeTCTData(argv[i]);
+      tct->CorrectBaseline();
+      tct->CalcNoise();
+      tct->CalculateWaveformProperties();
+      tct->SaveSignalShape();
+      tct->AnalysisAction();
     }
-    return 0;
+  return 0;
 }

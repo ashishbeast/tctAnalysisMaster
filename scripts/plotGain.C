@@ -71,7 +71,7 @@ int main()
         lgad.CalculateSignalProperties();
         
         //Read PIN data
-        AnalyzeTCTData pin(files[k+1]);
+        AnalyzeTCTData pin(files[k+1], 1.5);
         pin.CorrectBaseline();
         pin.CalcNoise();
         pin.CalculateSignalProperties();

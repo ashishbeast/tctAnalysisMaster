@@ -54,7 +54,7 @@ ReadTCTFile::ReadTCTFile(const Char_t* inFileName, Float_t tA)
 	  fscanf(inFile,"%d", &nV1);
 	  V1=TArrayF(nV1);
 	  for(Int_t i=0; i<nV1; ++i)
-	    fscanf(inFile,"%f", &V1[i]);    
+	    fscanf(inFile,"%f", &V1[i]);
 	  if(fileType!=11)
 	    fscanf(inFile,"%d", &nV2);
 	  else
@@ -130,13 +130,20 @@ ReadTCTFile::ReadTCTFile(const Char_t* inFileName, Float_t tA)
       nV1 = (Int_t) header[20+offset];
       V1 = TArrayF(nV1);
       for(Int_t i =0;i <nV1;++i)
-	V1[i] = header[21+offset+i];
-
+	{
+	  V1[i] = header[21+offset+i];
+	  //printf("Voltage 1: %d ==> %f\n", i+1, V1[i]);
+	}
+      
       //get Number of voltage steps for Power Supply 2
       nV2 = (Int_t) header[21+offset+nV1];
       V2 = TArrayF(nV2);
       for(Int_t i =0;i <nV2;++i)
-	V2[i] = header[22+offset+nV1+i];
+	{
+	  V2[i] = header[22+offset+nV1+i];
+	  //printf("Voltage 2: %d ==> %f\n", i+1, V2[i]);
+	}
+      
 
       _nV = nV1+nV2;
       _totEvents = _nSteps*nV1*nV2; //number of all waveforms
@@ -227,6 +234,8 @@ void ReadTCTFile::ReadWfsBin(Float_t tA)
   TClonesArray &entryP3 = *_ch[3];
   
   Float_t buf[33000];
+
+  //printf("nV1: %d \t nV2: %d \n", nV1, nV2);
   
   for(Int_t i=0; i<nV1; ++i)
     {
@@ -237,6 +246,7 @@ void ReadTCTFile::ReadWfsBin(Float_t tA)
 	  if(_swap)
 	    byteSwapIP(buf, 4);
 
+	  //printf("%f \t %f \t %f \t %f\n", buf[0], buf[1], buf[2], buf[3]);
 	  tV1 = buf[0]; tV2 = buf[1];
 	  tI1 = buf[2]; tI2 = buf[3];
 	  
@@ -244,6 +254,8 @@ void ReadTCTFile::ReadWfsBin(Float_t tA)
 	  I1[j+ i*nV2] = tI1;
 	  V2[j] = tV2;
 	  I2[j+ i*nV2] = tI2;
+
+	  //printf("v1: %f \t v2: %f \t i1: %f \t i2: %f \n", V1[i], V2[j], I1[j+i*nV2], I2[j+i*nV2]);
 
 	  for(Int_t k=0; k<_nSteps; ++k)
 	    {
@@ -278,7 +290,6 @@ void ReadTCTFile::ReadWfsBin(Float_t tA)
 	      xCords[5][index] = tI1;
 	      xCords[6][index] = tI2;
 	      
-
 	      // //Creating Histograms for each Index
 	      // for(Int_t m=0; m<_nCH; ++m)
 	      // 	{
@@ -541,7 +552,7 @@ void ReadTCTFile::Print()
   if(Comment!=NULL)
     printf("[         Comment]: %s \n", Comment);
   printf("*************************************\n");
-  if(nV1>1 and nV2>1)
+  if(nV1>1 or nV2>1)
     {
       for(Int_t i=0; i<nV1; ++i) 
 	for(Int_t j=0; j<nV2; ++j) 

@@ -18,12 +18,14 @@ int main(int argc, char* argv[])
     //Slew Rate File
     AnalyzeTCTData lgad(argv[1]);
     lgad.CorrectBaseline();
+    lgad.CalcNoise();
     lgad.CalculateWaveformProperties();
     lgad.SetCanvasSettings(false);
     
     //Noise File
     AnalyzeTCTData noise(argv[2]);
     noise.CorrectBaseline();
+    noise.CalcNoise();
     noise.CalculateWaveformProperties();
     
     

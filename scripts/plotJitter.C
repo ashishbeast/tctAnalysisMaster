@@ -14,8 +14,12 @@ void SetStyle(Bool_t threeD = false);
 int main()
 {
     SetStyle(false);
-    TString files[7]={"../data/slapp_1MIP_W_8_pad_A_type_0_gain_1_VS_IR_b.tct",  "../data/slapp_1MIP_W_8_pad_A_type_2_gain_1_VS_IR_b.tct", "../data/slapp_1MIP_W_8_pad_B_type_2_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_8_pad_C_type_2_gain_1_VS_IR_a.tct",
-        "../data/slapp_1MIP_W_1_pad_C_type_1_gain_1_VS_IR_Hole_5.tct"};
+    TString files[7]={
+      "../data/slapp_1MIP_W_8_pad_A_type_0_gain_1_VS_IR_b.tct",
+      "../data/slapp_1MIP_W_8_pad_A_type_2_gain_1_VS_IR_b.tct",
+      "../data/slapp_1MIP_W_8_pad_B_type_2_gain_1_VS_IR_a.tct",
+      "../data/slapp_1MIP_W_8_pad_C_type_2_gain_1_VS_IR_a.tct",
+      "../data/slapp_1MIP_W_1_pad_C_type_1_gain_1_VS_IR_Hole_5.tct"};
                      
         
     TCanvas *can = new TCanvas("can","",1200,1000);

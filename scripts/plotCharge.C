@@ -52,8 +52,13 @@ int main()
         legend = "Wafer-"+wafer+", pad-"+pad+" ("+ padType +")";
         
         //Read data
-        AnalyzeTCTData lgad(files[k]);
-        lgad.CorrectBaseline();
+	Float_t thres = 7.2;
+	if(k==4)
+	  thres = 1.5;
+	else
+	  thres = 7.2;
+	AnalyzeTCTData lgad(files[k], thres);
+	lgad.CorrectBaseline();
         lgad.CalcNoise();
         lgad.CalculateSignalProperties();
         
