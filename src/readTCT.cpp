@@ -16,9 +16,9 @@ int main(int argc, char* argv[])
     
     for(Int_t i = 1; i < argc; ++i)
     {
-        ReadTCTFile tct(argv[1], 0.);
+        ReadTCTFile *tct = new ReadTCTFile(argv[1], 0.);
         //Print Headers
-        tct.Print();
+        tct->Print();
     }
     return 0;
 }

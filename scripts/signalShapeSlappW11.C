@@ -14,25 +14,26 @@ void SetStyle(Bool_t threeD = false);
 int main()
 {
     SetStyle(false);
-    TString files[7]={
-      "../data/slapp_1MIP_W_8_pad_A_type_0_gain_1_VS_IR_b.tct",
-      "../data/slapp_1MIP_W_8_pad_A_type_2_gain_1_VS_IR_b.tct",
-      "../data/slapp_1MIP_W_8_pad_B_type_2_gain_1_VS_IR_a.tct",
-      "../data/slapp_1MIP_W_8_pad_C_type_2_gain_1_VS_IR_a.tct",
-      "../data/slapp_1MIP_W_1_pad_C_type_1_gain_1_VS_IR_Hole_5.tct"};
+    TString files[14]={"../data/slapp_1MIP_W_11_pad_A_type_0_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_11_pad_A_type_0_gain_1_VS_IR_a_Noise.tct",
+                        "../data/slapp_1MIP_W_11_pad_A_type_1_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_11_pad_A_type_1_gain_1_VS_IR_a_Noise.tct",
+                        "../data/slapp_1MIP_W_11_pad_A_type_2_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_11_pad_A_type_2_gain_1_VS_IR_a_Noise.tct",
+                        "../data/slapp_1MIP_W_11_pad_B_type_1_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_11_pad_B_type_1_gain_1_VS_IR_a_Noise.tct",
+                        "../data/slapp_1MIP_W_11_pad_B_type_2_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_11_pad_B_type_2_gain_1_VS_IR_a_Noise.tct",
+                        "../data/slapp_1MIP_W_11_pad_C_type_1_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_11_pad_C_type_1_gain_1_VS_IR_a_Noise.tct",
+                        "../data/slapp_1MIP_W_11_pad_C_type_2_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_11_pad_C_type_2_gain_1_VS_IR_a_Noise.tct"};
                      
         
     TCanvas *can = new TCanvas("can","",1200,1000);
-    TLegend *leg = new TLegend(0.4078464,0.625,0.4482471,0.914959,NULL,"brNDC");
-    leg->SetHeader("Space LGAD","C");
+    TLegend *leg = new TLegend(0.6078464,0.625,0.8482471,0.914959,NULL,"brNDC");
+    leg->SetHeader("Wafer 11","C");
     Int_t col[12] = {kRed,kBlue,kGreen,kBlack,13,6,7,8,9,28,34,49};
     Int_t ms[12] = {20,21,22,23,29,33,34,39,41,43,45,47};
     
     //gPad->SetLogy();
     TObjArray *info;
     TString wafer, pad, type, padType, legend, sensor;
-    
-    for(Int_t k=0;k<5;++k)
+    TH1F *signal;
+    for(Int_t k=0;k<14;k+=2)
     {
         cout<<"Processing File: "<<files[k]<<endl;
         info = files[k].Tokenize("_");
@@ -40,68 +41,69 @@ int main()
         pad   = ((TObjString*)(info->At(5)))->String();
         type  = ((TObjString*)(info->At(7)))->String();
         sensor= ((TObjString*)(info->At(9)))->String();
-        
-        if(type == "0")
-            padType = "No-Metal";
-        if(type == "1")
-            padType = "Metal";
-        if(type == "2")
-            padType = "Metal+Contact";
-        
-        if(sensor == "0")
-            sensor = "PIN";
-        else
-            sensor = "LGAD";
-        
-        legend = "Wafer-"+wafer+", pad-"+pad+" ("+ padType +")";
+
+        legend = pad+", Type-"+ type;
         
         //Read data
+        
+        //slewRate File
         AnalyzeTCTData lgad(files[k]);
         lgad.CorrectBaseline();
         lgad.CalcNoise();
-        lgad.CalculateSignalProperties();
-        //lgad.SaveSignalShape();
+        lgad.CalculateWaveformProperties();
         
-        Int_t nV = lgad._nV1; //Number of Voltage points for LGAD
-        Int_t step = TMath::Abs(lgad._tct->V1[1]-lgad._tct->V1[0]);
-        //Int_t reduce = 60/step +1;
-        //cout<<Form("Voltage Steps: %d \t steps: %d V\t reduce:%d", nV, step, reduce)<<endl;
-        //Int_t arrS = ((nV-1) * step)/10 - reduce;
+        //noise File
+        AnalyzeTCTData noise(files[k+1]);
+        noise.CorrectBaseline();
+        noise.CalculateWaveformProperties();
         
-        Int_t arrS = (nV-20)/10 + 1;
+        Int_t nV = lgad._nV1-1; //Number of Voltage points for LGAD
         
-        Float_t jitter[arrS];
-        Float_t err[arrS];
-        Float_t voltage[arrS];
-    
-        for(Int_t i=20; i<nV; i+=10)
+        signal = (TH1F*) lgad._histo[0][nV]->Clone();
+        signal->Scale(lgad._polarity);
+        signal->Scale(1/lgad._bmValue[nV]);
+        
+        if(type == "0")
+            signal->SetMarkerStyle(25);
+        else if(type =="1")
+            signal->SetMarkerStyle(21);
+        else
+            signal->SetMarkerStyle(49);
+        
+        if(pad == "A")
         {
-            voltage[(i-20)/10] = i*step;
-            jitter[(i-20)/10] = lgad._sigJitter[0][i];
+            signal->SetMarkerColor(kRed);
+            signal->SetLineColor(kRed);
+        }
+        else if(pad == "B")
+        {
+            signal->SetMarkerColor(kBlue);
+            signal->SetLineColor(kBlue);
+        }
+        else
+        {
+            signal->SetMarkerColor(kGreen+2);
+            signal->SetLineColor(kGreen+2);
         }
         
-        TGraphErrors *gr = new TGraphErrors(arrS,voltage,jitter,0,0);
-        if(wafer == "1")
-            gr->SetMarkerStyle(21);
-        else
-            gr->SetMarkerStyle(20);
-        gr->SetMarkerColor(col[k]);
-        gr->SetMarkerSize(1.5);
-        gr->SetLineColor(col[k]);
+        signal->SetMarkerSize(2);
+        signal->SetLineWidth(3);
+        
         if(k==0)
         {
-            gr->Draw("apl");
-            gr->GetXaxis()->SetTitle("V_{bias} (V)");
-            gr->GetYaxis()->SetTitle("Jitter (ps)");
+            signal->Draw("HIST PL");
+            signal->GetXaxis()->SetTitle("Time (ns)");
+            signal->GetYaxis()->SetTitle("Voltage (mV)");
         }
         else
-            gr->Draw("plsame");
-        gr->GetYaxis()->SetRangeUser(0,500);
-        //gr->GetXaxis()->SetRangeUser(0,520);
-        leg->AddEntry(gr, legend, "epl");
+            signal->Draw("HIST PLSAME");
+        signal->GetYaxis()->SetRangeUser(0,110);
+        signal->GetXaxis()->SetRangeUser(0,10);
+        leg->AddEntry(signal, legend, "p");
     }
+    
     leg->Draw();
-    can->SaveAs("../figures/jitterSLAPP.png","png");
+    can->SaveAs("../figures/signalShapeSLAPPW11.png","png");
     //can->SaveAs("../figures/jitterSLAPP.pdf","pdf");
     return 0;
 }

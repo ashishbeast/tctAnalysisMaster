@@ -25,8 +25,8 @@ ReadTCTFile::ReadTCTFile(const Char_t* inFileName, Float_t tA)
       
   if(inFile == NULL)
     {
-      printf("  [ERROR] : Unable to open File for Reading \n");
-      printf("[Warning] : Exiting program!!! \n");
+      printf("\033[1;31m[  ERROR]\033[0m : Unable to open File for Reading \n");
+      printf("\033[1;35m[WARNING]\033[0m : Exiting program!!! \n");
       exit(0);
     }
   
@@ -35,8 +35,8 @@ ReadTCTFile::ReadTCTFile(const Char_t* inFileName, Float_t tA)
       fscanf(inFile, "%d", &fileType);
       if(!(fileType==11 || fileType==22 || fileType==33 || fileType==51 || fileType==81 || fileType==82))  // if it is something else exit
 	{
-	  printf("  [ERROR] : Can not read other formats than waveform: %d!\n", fileType);
-	  printf("[Warning] : Exiting program!!! \n");
+	  printf("\033[1;31m[  ERROR]\033[0m : Can not read other formats than waveform: %d!\n", fileType);
+	  printf("\033[1;35m[WARNING]\033[0m : Exiting program!!! \n");
 	  exit(0);
 	}
       else
@@ -96,7 +96,7 @@ ReadTCTFile::ReadTCTFile(const Char_t* inFileName, Float_t tA)
 	byteSwapIP(header, read);
       
       fileType = (Int_t) header[0];
-      cout<<Form("Reading File type = %d \n",fileType);
+      cout<<Form("\033[1;32mReading File type = %d \033[0m\n",fileType);
 
       //Read in the Buffer
       rewind(inFile);

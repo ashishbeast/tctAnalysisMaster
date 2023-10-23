@@ -14,17 +14,18 @@ void SetStyle(Bool_t threeD = false);
 int main()
 {
     SetStyle(false);
-    TString files[7]={
-      "../data/slapp_1MIP_W_8_pad_A_type_0_gain_1_VS_IR_b.tct",
-      "../data/slapp_1MIP_W_8_pad_A_type_2_gain_1_VS_IR_b.tct",
-      "../data/slapp_1MIP_W_8_pad_B_type_2_gain_1_VS_IR_a.tct",
-      "../data/slapp_1MIP_W_8_pad_C_type_2_gain_1_VS_IR_a.tct",
-      "../data/slapp_1MIP_W_1_pad_C_type_1_gain_1_VS_IR_Hole_5.tct"};
+    TString files[14]={"../data/slapp_1MIP_W_11_pad_A_type_0_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_11_pad_A_type_0_gain_1_VS_IR_a_Noise.tct",
+                        "../data/slapp_1MIP_W_11_pad_A_type_1_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_11_pad_A_type_1_gain_1_VS_IR_a_Noise.tct",
+                        "../data/slapp_1MIP_W_11_pad_A_type_2_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_11_pad_A_type_2_gain_1_VS_IR_a_Noise.tct",
+                        "../data/slapp_1MIP_W_11_pad_B_type_1_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_11_pad_B_type_1_gain_1_VS_IR_a_Noise.tct",
+                        "../data/slapp_1MIP_W_11_pad_B_type_2_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_11_pad_B_type_2_gain_1_VS_IR_a_Noise.tct",
+                        "../data/slapp_1MIP_W_11_pad_C_type_1_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_11_pad_C_type_1_gain_1_VS_IR_a_Noise.tct",
+                        "../data/slapp_1MIP_W_11_pad_C_type_2_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_11_pad_C_type_2_gain_1_VS_IR_a_Noise.tct"};
                      
         
     TCanvas *can = new TCanvas("can","",1200,1000);
-    TLegend *leg = new TLegend(0.4078464,0.625,0.4482471,0.914959,NULL,"brNDC");
-    leg->SetHeader("Space LGAD","C");
+    TLegend *leg = new TLegend(0.6078464,0.625,0.4482471,0.914959,NULL,"brNDC");
+    leg->SetHeader("Wafer 11","C");
     Int_t col[12] = {kRed,kBlue,kGreen,kBlack,13,6,7,8,9,28,34,49};
     Int_t ms[12] = {20,21,22,23,29,33,34,39,41,43,45,47};
     
@@ -32,7 +33,7 @@ int main()
     TObjArray *info;
     TString wafer, pad, type, padType, legend, sensor;
     
-    for(Int_t k=0;k<5;++k)
+    for(Int_t k=0;k<14;k+=2)
     {
         cout<<"Processing File: "<<files[k]<<endl;
         info = files[k].Tokenize("_");
@@ -41,68 +42,84 @@ int main()
         type  = ((TObjString*)(info->At(7)))->String();
         sensor= ((TObjString*)(info->At(9)))->String();
         
-        if(type == "0")
-            padType = "No-Metal";
-        if(type == "1")
-            padType = "Metal";
-        if(type == "2")
-            padType = "Metal+Contact";
-        
-        if(sensor == "0")
-            sensor = "PIN";
-        else
-            sensor = "LGAD";
-        
-        legend = "Wafer-"+wafer+", pad-"+pad+" ("+ padType +")";
+//        if(type == "0")
+//            padType = "No-Metal";
+//        if(type == "1")
+//            padType = "Metal";
+//        if(type == "2")
+//            padType = "Metal+Contact";
+//
+        legend = pad+", Type-"+ type;
         
         //Read data
+        
+        //slewRate File
         AnalyzeTCTData lgad(files[k]);
         lgad.CorrectBaseline();
         lgad.CalcNoise();
-        lgad.CalculateSignalProperties();
-        //lgad.SaveSignalShape();
+        lgad.CalculateWaveformProperties();
+        
+        //noise File
+        AnalyzeTCTData noise(files[k+1], 1.5);
+        noise.CorrectBaseline();
+	noise.CalcNoise();
+        noise.CalculateWaveformProperties();
         
         Int_t nV = lgad._nV1; //Number of Voltage points for LGAD
         Int_t step = TMath::Abs(lgad._tct->V1[1]-lgad._tct->V1[0]);
-        //Int_t reduce = 60/step +1;
-        //cout<<Form("Voltage Steps: %d \t steps: %d V\t reduce:%d", nV, step, reduce)<<endl;
-        //Int_t arrS = ((nV-1) * step)/10 - reduce;
+        Int_t arrS = 9;
         
-        Int_t arrS = (nV-20)/10 + 1;
-        
-        Float_t jitter[arrS];
-        Float_t err[arrS];
-        Float_t voltage[arrS];
+        Float_t snr[arrS];
+        Float_t vBias[arrS];
     
         for(Int_t i=20; i<nV; i+=10)
         {
-            voltage[(i-20)/10] = i*step;
-            jitter[(i-20)/10] = lgad._sigJitter[0][i];
+            vBias[(i-20)/10] = i*step;
+            snr[(i-20)/10] = lgad._sigNormAmplitude[0][i]/noise._sigNoise[0][i];
         }
         
-        TGraphErrors *gr = new TGraphErrors(arrS,voltage,jitter,0,0);
-        if(wafer == "1")
+        TGraphErrors *gr = new TGraphErrors(arrS,vBias,snr,0,0);
+        
+        if(type == "0")
+            gr->SetMarkerStyle(25);
+        else if(type =="1")
             gr->SetMarkerStyle(21);
         else
-            gr->SetMarkerStyle(20);
-        gr->SetMarkerColor(col[k]);
-        gr->SetMarkerSize(1.5);
-        gr->SetLineColor(col[k]);
-        if(k==0)
+            gr->SetMarkerStyle(49);
+        
+        if(pad == "A")
         {
-            gr->Draw("apl");
-            gr->GetXaxis()->SetTitle("V_{bias} (V)");
-            gr->GetYaxis()->SetTitle("Jitter (ps)");
+            gr->SetMarkerColor(kRed);
+            gr->SetLineColor(kRed);
+        }
+        else if(pad == "B")
+        {
+            gr->SetMarkerColor(kBlue);
+            gr->SetLineColor(kBlue);
         }
         else
-            gr->Draw("plsame");
-        gr->GetYaxis()->SetRangeUser(0,500);
-        //gr->GetXaxis()->SetRangeUser(0,520);
-        leg->AddEntry(gr, legend, "epl");
+        {
+            gr->SetMarkerColor(kGreen+2);
+            gr->SetLineColor(kGreen+2);
+        }
+        
+        //gr->SetMarkerColor(col[k]);
+        gr->SetMarkerSize(2);
+        //gr->SetLineColor(col[k]);
+        if(k==0)
+        {
+            gr->Draw("ap");
+            gr->GetXaxis()->SetTitle("V_{bias} (V)");
+            gr->GetYaxis()->SetTitle("SNR");
+        }
+        else
+            gr->Draw("psame");
+        gr->GetYaxis()->SetRangeUser(0,80);
+        leg->AddEntry(gr, legend, "p");
     }
+    
     leg->Draw();
-    can->SaveAs("../figures/jitterSLAPP.png","png");
-    //can->SaveAs("../figures/jitterSLAPP.pdf","pdf");
+    can->SaveAs("../figures/snrSLAPPW11.png","png");
     return 0;
 }
 

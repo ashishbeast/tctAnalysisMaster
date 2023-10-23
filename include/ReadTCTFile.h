@@ -38,6 +38,7 @@ class ReadTCTFile
 {
 private:
   Bool_t _swap = false;
+  //Bool_t _swap = true;
   void byteSwap(Char_t *, Char_t*);
   void byteSwapIP(Float_t *, Int_t);
   

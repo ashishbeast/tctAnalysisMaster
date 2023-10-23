@@ -18,12 +18,14 @@ int main(int argc, char* argv[])
     //LGAD File
     AnalyzeTCTData lgad(argv[1]);
     lgad.CorrectBaseline();
+    lgad.CalcNoise();
     lgad.CalculateWaveformProperties();
     lgad.SetCanvasSettings(false);
     
     //PIN File
     AnalyzeTCTData pin(argv[2]);
     pin.CorrectBaseline();
+    pin.CalcNoise();
     pin.CalculateWaveformProperties();
     
     Int_t nVL = lgad._nV1; //Number of Voltage points for LGAD

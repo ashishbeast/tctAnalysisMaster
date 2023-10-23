@@ -17,12 +17,12 @@ int main(int argc, char* argv[])
   //Read and Analyze the file
   for(Int_t i = 1; i < argc; ++i)
     {
-      AnalyzeTCTData *tct = new AnalyzeTCTData(argv[i]);
-      tct->CorrectBaseline();
-      tct->CalcNoise();
-      tct->CalculateWaveformProperties();
-      tct->SaveSignalShape();
-      tct->AnalysisAction();
+      AnalyzeTCTData *pin = new AnalyzeTCTData(argv[i], 1.5); 
+      pin->CorrectBaseline();
+      pin->CalcNoise();
+      pin->CalculateWaveformProperties();
+      pin->SaveSignalShape();
+      pin->AnalysisAction();
     }
   return 0;
 }

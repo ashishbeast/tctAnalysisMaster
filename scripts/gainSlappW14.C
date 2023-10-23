@@ -14,67 +14,42 @@ void SetStyle(Bool_t threeD = false);
 int main()
 {
     SetStyle(false);
-    TString files[10]={"../data/slapp_1MIP_W_8_pad_A_type_0_gain_1_VS_IR_b.tct", "../data/slapp_1MIP_W_8_pad_A_type_0_gain_0_VS_IR_a.tct",
-        "../data/slapp_1MIP_W_8_pad_A_type_2_gain_1_VS_IR_b.tct", "../data/slapp_1MIP_W_8_pad_A_type_0_gain_0_VS_IR_a.tct",
-        "../data/slapp_1MIP_W_8_pad_B_type_2_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_8_pad_A_type_0_gain_0_VS_IR_a.tct",
-        "../data/slapp_1MIP_W_8_pad_C_type_2_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_8_pad_C_type_0_gain_0_VS_IR_a.tct",
-        "../data/slapp_1MIP_W_1_pad_C_type_1_gain_1_VS_IR_Hole_5.tct", "../data/slapp_1MIP_W_1_pad_C_type_1_gain_0_VS_IR_Hole_5.tct"};
+    TString files[2]={"../dataLeo/W_14_Type_1_Area_100_Av_256.tct", "../dataLeo/W_14_Type_1_Area_100_NoGain_Av_256.tct"};
     
-    
-    //"../data/slapp_1MIP_W_8_pad_B_type_1_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_8_pad_C_type_0_gain_0_VS_IR_a.tct",
-    //"../data/slapp_1MIP_W_8_pad_A_type_1_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_8_pad_A_type_0_gain_0_VS_IR_a.tct",
-    //"../data/slapp_1MIP_W_1_pad_C_type_1_gain_1_VS_IR_Hole_5.tct", "../data/slapp_1MIP_W_1_pad_C_type_1_gain_0_VS_IR_Hole_5.tct"};
-    
-    
-    //    TString files[14]={"../data/slapp_1MIP_W_8_pad_A_type_0_gain_1_VS_IR_b.tct", "../data/slapp_1MIP_W_1_pad_C_type_1_gain_0_VS_IR_Hole_5.tct",
-    //                      "../data/slapp_1MIP_W_8_pad_A_type_1_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_1_pad_C_type_1_gain_0_VS_IR_Hole_5.tct",
-    //                      "../data/slapp_1MIP_W_8_pad_A_type_2_gain_1_VS_IR_b.tct", "../data/slapp_1MIP_W_1_pad_C_type_1_gain_0_VS_IR_Hole_5.tct",
-    //                      "../data/slapp_1MIP_W_8_pad_B_type_1_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_1_pad_C_type_1_gain_0_VS_IR_Hole_5.tct",
-    //                      "../data/slapp_1MIP_W_8_pad_B_type_2_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_1_pad_C_type_1_gain_0_VS_IR_Hole_5.tct",
-    //                      "../data/slapp_1MIP_W_8_pad_C_type_2_gain_1_VS_IR_a.tct", "../data/slapp_1MIP_W_1_pad_C_type_1_gain_0_VS_IR_Hole_5.tct",
-    //                      "../data/slapp_1MIP_W_1_pad_C_type_1_gain_1_VS_IR_Hole_5.tct", "../data/slapp_1MIP_W_1_pad_C_type_1_gain_0_VS_IR_Hole_5.tct"};
-    //
-    TCanvas *canvas = new TCanvas("canvas","",1200,1000);
-    TLegend *leg = new TLegend(0.2078464,0.625,0.4482471,0.914959,NULL,"brNDC");
-    leg->SetHeader("Space LGAD","C");
-    
+    TCanvas *can = new TCanvas("can","",1200,1000);
     //gPad->SetLogy();
+    TLegend *leg = new TLegend(0.6078464,0.625,0.2482471,0.914959,NULL,"brNDC");
+    leg->SetHeader("Wafer 14","C");
     Int_t col[12] = {kRed,kBlue,kGreen,kBlack,13,6,7,8,9,28,34,49};
     Int_t ms[12] = {20,21,22,23,29,33,34,39,41,43,45,47};
     
+    //gPad->SetLogy();
     TObjArray *info;
-    TString wafer, pad, type, padType, legend;
+    TString wafer, pad, type, padType, legend, sensor;
     
-    for(Int_t k=0;k<10;k+=2)
+    for(Int_t k=0;k<2;k+=2)
     {
-        //if(!(k%2==0))
-        //    continue;
-        cout<<"Processing File: "<<files[k]<<endl;
-        
         info = files[k].Tokenize("_");
-        wafer = ((TObjString*)(info->At(3)))->String();
-        pad   = ((TObjString*)(info->At(5)))->String();
-        type  = ((TObjString*)(info->At(7)))->String();
-        if(type == "0")
-            padType = "No-Metal";
-        if(type == "1")
-            padType = "Metal";
-        if(type == "2")
-            padType = "Metal+Contact";
+        wafer = ((TObjString*)(info->At(1)))->String();
+	type  = ((TObjString*)(info->At(3)))->String();
+                
+        legend = "Type-"+ type;
         
-        legend = "Wafer-"+wafer+", pad-"+pad+" ("+ padType +")";
+        //Read data
         
+        cout<<"Processing File: "<<files[k]<<endl;
         //Read LGAD data
         AnalyzeTCTData lgad(files[k]);
         lgad.CorrectBaseline();
         lgad.CalcNoise();
-        lgad.CalculateSignalProperties();
+        lgad.CalculateWaveformProperties();
         
+        cout<<"Processing File: "<<files[k+1]<<endl;
         //Read PIN data
         AnalyzeTCTData pin(files[k+1], 1.5);
         pin.CorrectBaseline();
         pin.CalcNoise();
-        pin.CalculateSignalProperties();
+        pin.CalculateWaveformProperties();
         
         Int_t nVL = lgad._nV1; //Number of Voltage points for LGAD
         Int_t nVP = pin._nV1; //Number of Voltage points for PIN
@@ -90,8 +65,11 @@ int main()
         
         for(Int_t i=0; i< nVP; ++i)
         {
-            chargeP[i] = pin._sigCharge[0][i];
+            chargeP[i] = pin._sigNormCharge[0][i];
             errP[i] = pin._sigChargeError[0][i];
+            
+            //chargeP[i] = pin._sigCharge[0][i];
+            //errP[i] = pin._sigChargeError[0][i];
         }
         
         //Average Charge in Pin
@@ -104,20 +82,29 @@ int main()
         for(Int_t i=0; i<nVL; ++i)
         {
             voltage[i] = i*step;
-            chargeL[i] = lgad._sigCharge[0][i];
+            //chargeL[i] = lgad._sigCharge[0][i];
+            //errL[i] = lgad._sigChargeError[0][i];
+            
+            chargeL[i] = lgad._sigNormCharge[0][i];
             errL[i] = lgad._sigChargeError[0][i];
+            
             gain[i] = chargeL[i]/avgQ;
             errG[i] = gain[i]*TMath::Sqrt(TMath::Power(errL[i]/chargeL[i],2)+TMath::Power(errAvg/avgQ,2));
         }
         
         TGraphErrors *gr = new TGraphErrors(nVL,voltage,gain,0,errG);
-        if(wafer == "1")
+        
+        if(type == "0")
+            gr->SetMarkerStyle(25);
+        else if(type =="1")
             gr->SetMarkerStyle(21);
         else
-            gr->SetMarkerStyle(20);
-        gr->SetMarkerColor(col[k/2]);
-        gr->SetMarkerSize(1.5);
-        gr->SetLineColor(col[k/2]);
+            gr->SetMarkerStyle(49);
+
+	gr->SetMarkerColor(col[k/2]);
+	gr->SetLineColor(col[k/2]);
+	gr->SetMarkerSize(2);
+	
         if(k==0)
         {
             gr->Draw("apl");
@@ -126,13 +113,12 @@ int main()
         }
         else
             gr->Draw("plsame");
-        gr->GetYaxis()->SetRangeUser(0,120);
-        gr->GetXaxis()->SetRangeUser(0,520);
-        leg->AddEntry(gr, legend, "epl");
+        gr->GetYaxis()->SetRangeUser(0,60);
+        leg->AddEntry(gr, legend, "p");
     }
+    
     leg->Draw();
-    canvas->SaveAs("../figures/gainSLAPP.png","png");
-    //canvas->SaveAs("../figures/gainSLAPP.pdf","pdf");
+    can->SaveAs("../figures/gainSLAPPW14.png","png");
     return 0;
 }
 

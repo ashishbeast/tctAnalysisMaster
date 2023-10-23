@@ -1,6 +1,3 @@
-//This macro calculates gain for multiples files
-//Gain is defined as the ratio of charge collected by LGAD to charge collected by PIN sensor
-
 #include "AnalyzeTCTData.h"
 #include "TCanvas.h"
 #include "TLegend.h"
@@ -14,12 +11,14 @@ void SetStyle(Bool_t threeD = false);
 int main()
 {
     SetStyle(false);
-    TString files[3]={"../data/MoVeIT_W13L_A_VS_IR_a.tct", "../data/MoVeIT_W13L_B_VS_IR_a.tct",
-        "../data/MoVeIT_W13L_AreaC_VS_IR_d.tct"};
+    TString files[3]={
+      "../data/MoVeIT_W13L_A_VS_IR_a.tct",
+      "../data/MoVeIT_W13L_B_VS_IR_a.tct",
+      "../data/MoVeIT_W13L_AreaC_VS_IR_d.tct"};
         
     TCanvas *canvas = new TCanvas("canvas","",1200,1000);
     TLegend *leg = new TLegend(0.4078464,0.625,0.4482471,0.914959,NULL,"brNDC");
-    leg->SetHeader("Space LGAD","C");
+    leg->SetHeader("MoVeIT","C");
     Int_t col[12] = {kRed,kBlue,kGreen,kBlack,13,6,7,8,9,28,34,49};
     Int_t ms[12] = {20,21,22,23,29,33,34,39,41,43,45,47};
     
@@ -40,25 +39,24 @@ int main()
         AnalyzeTCTData lgad(files[k]);
         lgad.CorrectBaseline();
         lgad.CalcNoise();
-        lgad.CalculateSignalProperties();
+        lgad.CalculateWaveformProperties();
         
         Int_t nV = lgad._nV1; //Number of Voltage points for LGAD
         Int_t step = TMath::Abs(lgad._tct->V1[1]-lgad._tct->V1[0]);
-        //Int_t arrS = ((nV * step)/10) - 12;
-        Int_t arrS = nV-20;
+	Int_t arrS = (nV-20)/5 + 1;
         Float_t jitter[arrS];
+	Float_t jitterErr[arrS];
         Float_t err[arrS];
         Float_t voltage[arrS];
     
-        for(Int_t i=20; i<nV; ++i)
+        for(Int_t i=20; i<nV; i+=5)
         {
-            voltage[i-20] = i*step;
-            //jitter[i-20] = 1000*(lgad._noise * TMath::Sqrt(256) * lgad._sigRiseTime[0][i])/(0.8 * lgad._sigAmplitude[0][i]);
-            //jitter[i-20] = 1000*(lgad._noise * TMath::Sqrt(256) / lgad._sigMaxSlope[0][i]);
-            //jitter[i-20] = 1000*(lgad._noise * TMath::Sqrt(256) / lgad._sigSlope[0][i]);
+	  voltage[(i-20)/5] = i*step;
+	  jitter[(i-20)/5] = 1000 * lgad._sigNoise[0][i] / lgad._sigSlewRate[0][i];
+	  jitterErr[(i-20)/5] = (jitter[(i-20)/5] / lgad._sigSlewRate[0][i]) * lgad._sigSlewRateError[0][i];
         }
         
-        TGraphErrors *gr = new TGraphErrors(arrS,voltage,jitter,0,0);
+        TGraphErrors *gr = new TGraphErrors(arrS,voltage,jitter,0,jitterErr);
         gr->SetMarkerStyle(ms[k]);
         gr->SetMarkerColor(col[k]);
         gr->SetMarkerSize(1.5);
@@ -71,8 +69,8 @@ int main()
         }
         else
             gr->Draw("plsame");
-        gr->GetYaxis()->SetRangeUser(0,1000);
-        gr->GetXaxis()->SetRangeUser(0,520);
+        gr->GetYaxis()->SetRangeUser(0,600);
+        gr->GetXaxis()->SetRangeUser(0,210);
         leg->AddEntry(gr, legend, "epl");
     }
     leg->Draw();
