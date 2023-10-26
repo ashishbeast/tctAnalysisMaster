@@ -229,7 +229,7 @@ void analyzeChargePINs()
       
       for(Int_t i=10; i< nVP1; ++i)
 	{
-	  chargeP.push_back(pin1->_sigNormCharge[0][i]);
+	  chargeP.push_back(pin1->_sigCharge[0][i]);
 	  //chargeP.push_back(pin2->_sigNormCharge[0][i]);
 	  errP.push_back(pin1->_sigChargeError[0][i]);
 	  //errP.push_back(pin2->_sigChargeError[0][i]);
@@ -255,7 +255,8 @@ void analyzeChargePINs()
   gr->SetLineWidth(2);
   gr->Draw("apl");
   gr->GetXaxis()->SetTitle("Thickness [#mum]");  
-  gr->GetYaxis()->SetTitle("Norm. charge (arb.)");
+  //gr->GetYaxis()->SetTitle("Norm. charge (arb.)");
+  gr->GetYaxis()->SetTitle("Charge (fC)");
   canvasC->SaveAs("../figures/spaceLgadsChargePin_PadC.png","png");
 }
 

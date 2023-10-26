@@ -129,14 +129,16 @@ AnalyzeTCTData::AnalyzeTCTData(const char* inFile)
     }
     
   //Allocate memory block for Map types (charge, amplitude, riseTime, CFD, toA, ratio(amplitude/charge))
-  _zValue = new Float_t**[7];
-  _map = new TH2F*[7];
-  _canvasMap = new TCanvas*[7];
+  _zValue = new Float_t**[9];
+  _map = new TH2F*[9];
+  _canvasMap = new TCanvas*[9];
 }
 
 AnalyzeTCTData::AnalyzeTCTData(const char* inFile, Float_t threshold)
 {
   //Set Parameters
+  _nAvOsc = 256;
+  _deltaT = 0.05;
   _termination = 50;
   _polarity = -1;
   _tmin = 0.;
@@ -247,9 +249,9 @@ AnalyzeTCTData::AnalyzeTCTData(const char* inFile, Float_t threshold)
     }
     
   //Allocate memory block for Map types (charge, amplitude, riseTime, CFD, toA, ratio(amplitude/charge))
-  _zValue = new Float_t**[7];
-  _map = new TH2F*[7];
-  _canvasMap = new TCanvas*[7];
+  _zValue = new Float_t**[9];
+  _map = new TH2F*[9];
+  _canvasMap = new TCanvas*[9];
 }
 
 AnalyzeTCTData::~AnalyzeTCTData()
@@ -392,7 +394,7 @@ Bool_t AnalyzeTCTData::FindWFShift()
       time = _tct->t0 + i*_tct->dt;
       if(amplitude >= maxAmp*0.5)
         {
-	  _tA = (time/1e-9)-1; //2ns before the 50% of Max Signal
+	  _tA = (time/1e-9)-2; //2ns before the 50% of Max Signal
 	  printf("[   INFO] Start of the Signal ==> %0.2f ns\n", _tA);
 	  return true;
         }
@@ -544,7 +546,7 @@ void AnalyzeTCTData::CalculateWaveformProperties()
 	signal = (TH1F*) _histo[i][j]->Clone();
 	signal->Scale(_polarity);
 	_sigNoise[i][j]    = CalcSignalNoise(signal);
-	_sigCharge[i][j]    = CalcCharge(signal, &_sigChargeError[i][j]);
+	_sigCharge[i][j]    = CalcCharge(signal, &_sigChargeError[i][j]) * 10;
 	_sigAmplitude[i][j] = CalcAmplitude(signal);
 	_SNR[i][j] = _sigAmplitude[i][j]/_sigNoise[i][j];
 	_sigAmplitudeError[i][j] = _sigNoise[i][j];
@@ -663,14 +665,14 @@ void AnalyzeTCTData::SaveSignalShape()
 	  signal->Draw("HIST L");
 	  signal->GetXaxis()->SetTitle("Time (ns)");
 	  signal->GetYaxis()->SetTitle("Voltage (mV)");
-	  signal->GetYaxis()->SetRangeUser(maxSignal->GetMinimum()-5, maxSignal->GetMaximum()+5);
-	  //signal->GetXaxis()->SetRangeUser(0, 10);
+	  signal->GetYaxis()->SetRangeUser(maxSignal->GetMinimum()-1, maxSignal->GetMaximum()+1);
+	  //signal->GetXaxis()->SetRangeUser(0, 50);
         }
       else
         {
 	  signal->Draw("HIST LSAME");
-	  signal->GetYaxis()->SetRangeUser(maxSignal->GetMinimum()-5, maxSignal->GetMaximum()+5);
-	  //signal->GetXaxis()->SetRangeUser(0, 10);
+	  signal->GetYaxis()->SetRangeUser(maxSignal->GetMinimum()-1, maxSignal->GetMaximum()+1);
+	  //signal->GetXaxis()->SetRangeUser(0, 50);
         }
     }
   cout<<"[ STATUS] Saving Signal...\n";
@@ -1160,8 +1162,8 @@ void AnalyzeTCTData::PlotMaps(Int_t mapType)
   TString xTitle, yTitle;
   Int_t *s[5], i, j;
     
-  TString zTitle[7] = {"Charge (fC)", "Amplitude (mV)", "Rise Time (ns)", "TOA_{50%} (ns)", "CFD_{30%} (ns)", "Ratio (Amplitude/Charge)", "TOT_{30%} (ns)"};
-  const char* msg[7] = {"Charge", "Amplitude", "RiseTime", "TOA", "CFD", "Ratio", "TOT"};
+  TString zTitle[9] = {"Charge (fC)", "Norm. Charge (arb.)", "Amplitude (mV)", "Norm. Amplitude (arb.)", "Rise Time (ns)", "TOA_{50%} (ns)", "CFD_{30%} (ns)", "Ratio (Amplitude/Charge)", "TOT_{30%} (ns)"};
+  const char* msg[9] = {"Charge", "NormCharge", "Amplitude", "NormAmplitude", "RiseTime", "TOA", "CFD", "Ratio", "TOT"};
     
   switch(mapType)
     {
@@ -1210,7 +1212,7 @@ void AnalyzeTCTData::PlotMaps(Int_t mapType)
     }
     
   //Allocate memory
-  for(Int_t mode=0; mode<7; ++mode)
+  for(Int_t mode=0; mode<9; ++mode)
     {
       _zValue[mode] = new Float_t*[pY];
         
@@ -1233,15 +1235,17 @@ void AnalyzeTCTData::PlotMaps(Int_t mapType)
 	  {
 	    _index = _tct->GetIndex(*s[0], *s[1], *s[2], *s[3], *s[4]);
 	    _zValue[0][j][i] = _sigCharge[iCh][_index];
-	    _zValue[1][j][i] = _sigAmplitude[iCh][_index];
-	    _zValue[2][j][i] = _sigRiseTime[iCh][_index];
-	    _zValue[3][j][i] = _sigCFD[iCh][_index][5];
-	    _zValue[4][j][i] = _sigCFD[iCh][_index][3];
-	    _zValue[5][j][i] = _sigRatio[iCh][_index];
-	    _zValue[6][j][i] = _sigTOT[iCh][_index];
+	    _zValue[1][j][i] = _sigNormCharge[iCh][_index];
+	    _zValue[2][j][i] = _sigAmplitude[iCh][_index];
+	    _zValue[3][j][i] = _sigNormAmplitude[iCh][_index];
+	    _zValue[4][j][i] = _sigRiseTime[iCh][_index];
+	    _zValue[5][j][i] = _sigCFD[iCh][_index][5];
+	    _zValue[6][j][i] = _sigCFD[iCh][_index][3];
+	    _zValue[7][j][i] = _sigRatio[iCh][_index];
+	    _zValue[8][j][i] = _sigTOT[iCh][_index];
 	  }
         
-      for(Int_t mode=0; mode<2; ++mode)
+      for(Int_t mode=0; mode<9; ++mode)
         {
 	  for(j = 0; j<pY; ++j)
 	    for(i = 0; i<pX; ++i)

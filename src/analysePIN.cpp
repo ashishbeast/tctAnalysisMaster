@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
   //Read and Analyze the file
   for(Int_t i = 1; i < argc; ++i)
     {
-      AnalyzeTCTData *pin = new AnalyzeTCTData(argv[i], 1.5); 
+      AnalyzeTCTData *pin = new AnalyzeTCTData(argv[i], 1); 
       pin->CorrectBaseline();
       pin->CalcNoise();
       pin->CalculateWaveformProperties();

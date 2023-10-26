@@ -223,7 +223,8 @@ void analyzeSlappPads(const char *pad, const char *area)
 	  
 	  for(Int_t i=0; i< nVP; ++i)
 	    {
-	      chargeP[i] = pin._sigNormCharge[0][i];
+	      //chargeP[i] = pin._sigNormCharge[0][i];
+	      chargeP[i] = pin._sigCharge[0][i];
 	      errP[i] = pin._sigChargeError[0][i];
 	      histRef->Fill(pin._bmValue[i]);
 	      nEv++;
@@ -798,7 +799,8 @@ void analyzeSlappPads(const char *pad, const char *area)
       grQPin->SetMarkerSize(1.5);
       grQPin->Draw("apl");
       grQPin->GetXaxis()->SetTitle("Thickness (#mum)");
-      grQPin->GetYaxis()->SetTitle("Norm. charge (arb.)");
+      //grQPin->GetYaxis()->SetTitle("Norm. charge (arb.)");
+      grQPin->GetYaxis()->SetTitle("Charge (fC)");
       //legQPin->AddEntry(grQPin, "Type 2", "epl");
       //legQPin->Draw();
 

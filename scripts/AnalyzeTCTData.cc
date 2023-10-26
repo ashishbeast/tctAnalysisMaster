@@ -543,7 +543,13 @@ void AnalyzeTCTData::CalculateWaveformProperties()
 	signal = (TH1F*) _histo[i][j]->Clone();
 	signal->Scale(_polarity);
 	_sigNoise[i][j]    = CalcSignalNoise(signal);
-	_sigCharge[i][j]    = CalcCharge(signal, &_sigChargeError[i][j]);
+	//Charge is calculated as the integral of the signal
+	// C = Int (Vo.dt/R) [C]
+	// C = Int (Vi.dt/R*Av) [C]
+	// Av is the amplifier gain (For Fermilab Board Av=100)
+	// Converting Charge from C to fC
+	// C = Int(V.dt) *1000 /(R*Av) [fC]
+	_sigCharge[i][j]    = CalcCharge(signal, &_sigChargeError[i][j]) * 10;
 	_sigAmplitude[i][j] = CalcAmplitude(signal);
 	_sigAmplitudeError[i][j] = _sigNoise[i][j];
 	_snr[i][j] = _sigAmplitude[i][j]/_sigNoise[i][j];
@@ -600,7 +606,7 @@ void AnalyzeTCTData::CalculateSignalProperties()
 	signal = (TH1F*) _histo[i][j]->Clone();
 	signal->Scale(_polarity);
 	_sigNoise[i][j]    = CalcSignalNoise(signal);
-	_sigCharge[i][j]    = CalcCharge(signal, &_sigChargeError[i][j]);
+	_sigCharge[i][j]    = CalcCharge(signal, &_sigChargeError[i][j]) * 10;
 	_sigAmplitude[i][j] = CalcAmplitude(signal);
 	_sigAmplitudeError[i][j] = _sigNoise[i][j];
 	if(_sigCharge[i][j] == 0.)
