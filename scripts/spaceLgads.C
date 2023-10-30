@@ -56,14 +56,14 @@ Float_t *rtPinError[nWaf];
 Bool_t processJitter          = kTRUE;
 Bool_t plotLaserStability     = kTRUE;
 Bool_t plotSignals            = kFALSE;
-Bool_t plotJitterVsGain       = kFALSE;
+Bool_t plotJitterVsGain       = kTRUE;
 Bool_t plotPinChargeThickness = kTRUE;
 
 // Save PulseShape at 200 V for each file
 TH1F *pulseShape[nFiles];
 
 // Save the reference amplitude of beam monitor into an histogram
-TH1F *histRef = new TH1F("histRef","",400, 1, 1.5);
+TH1F *histRef = new TH1F("histRef","", 25, 100, 250);
 Int_t nEv = 0;
 
 // Global Legend for the layout types
@@ -163,7 +163,6 @@ void analyzeSlappPads(const char *pad, const char *area)
 	    }
 	  info = tctFiles[k].Tokenize("_");
 	  wafer = ((TObjString*)(info->At(3)))->String();
-	  //pad   = ((TObjString*)(info->At(5)))->String();
 	  type  = ((TObjString*)(info->At(7)))->String();
 	  sensor= ((TObjString*)(info->At(9)))->String();
 	  legend = "Wafer-" + wafer;
@@ -171,39 +170,44 @@ void analyzeSlappPads(const char *pad, const char *area)
 	  //Read data  
 	  // lgad File -> Amplitude, Charge, SlewRate, Jitter
 	  cout<<"\033[1;32m Processing File (LGAD): "<<tctFiles[k]<<"\033[0m"<<endl;
-	  AnalyzeTCTData lgad(tctFiles[k], 5);
-	  lgad.CorrectBaseline();
-	  lgad.CalcNoise();
-	  lgad.SetIntegralLimits(0, 50.);
-	  lgad.CalculateWaveformProperties();
+	  AnalyzeTCTData *lgad = new AnalyzeTCTData(tctFiles[k], 5);
+	  lgad->SetAveragesInOscilloscope(256);
+	  lgad->SetIntegralLimits(0, 50.);
+	  lgad->CorrectBaseline();
+	  lgad->CalcNoise();
+	  lgad->CalculateWaveformProperties();
         
 	  // noise File -> Noise for Jitter
 	  cout<<"\033[1;32m Processing File (NOISE): "<<tctFiles[k+1]<<"\033[0m"<<endl;
-	  AnalyzeTCTData noise(tctFiles[k+1], 7.2);
-	  noise.CorrectBaseline();
-	  noise.CalcNoise();
-	  noise.CalculateWaveformProperties();
+	  AnalyzeTCTData *noise = new AnalyzeTCTData(tctFiles[k+1], 7.2);
+	  noise->SetAveragesInOscilloscope(0);
+	  noise->SetIntegralLimits(0, 50.);
+	  noise->CorrectBaseline();
+	  noise->CalcNoise();
+	  noise->CalculateWaveformProperties();
 
 	  // pin File -> Charge
 	  cout<<"\033[1;32m Processing File (PIN): "<<tctFiles[k+2]<<"\033[0m"<<endl;
-	  AnalyzeTCTData pin(tctFiles[k+2], 0.9);
-	  pin.CorrectBaseline();
-	  pin.CalcNoise();
-	  pin.SetIntegralLimits(0, 50.);
-	  pin.CalculateWaveformProperties();
+	  AnalyzeTCTData *pin = new AnalyzeTCTData(tctFiles[k+2], 0.9);
+	  pin->SetAveragesInOscilloscope(256);
+	  pin->SetIntegralLimits(0, 50.);
+	  pin->CorrectBaseline();
+	  pin->CalcNoise();
+	  pin->CalculateWaveformProperties();
 
 	  //Number of Voltage points for LGAD
-	  Int_t nVL = lgad._nV1; 
-	  Int_t stepL = TMath::Abs(lgad._tct->V1[1]-lgad._tct->V1[0]);
+	  Int_t nVL = lgad->_nV1; 
+	  Int_t stepL = TMath::Abs(lgad->_tct->V1[1]-lgad->_tct->V1[0]);
 
 	  //Number of Voltage points for PIN
-	  Int_t nVP = pin._nV1;
-	  Int_t stepP = TMath::Abs(pin._tct->V1[1]-pin._tct->V1[0]);
+	  Int_t nVP = pin->_nV1;
+	  Int_t stepP = TMath::Abs(pin->_tct->V1[1]-pin->_tct->V1[0]);
 
 	  // Array of applied voltage
 	  Float_t vBias[nVL];
 	  Float_t noiseSig[nVL];
 	  Float_t amp[nVL];
+	  Float_t ampErr[nVL];
 	  Float_t snr[nVL];
 	  Float_t charge[nVL];
 	  Float_t chargeErr[nVL];
@@ -223,10 +227,10 @@ void analyzeSlappPads(const char *pad, const char *area)
 	  
 	  for(Int_t i=0; i< nVP; ++i)
 	    {
-	      //chargeP[i] = pin._sigNormCharge[0][i];
-	      chargeP[i] = pin._sigCharge[0][i];
-	      errP[i] = pin._sigChargeError[0][i];
-	      histRef->Fill(pin._bmValue[i]);
+	      //chargeP[i] = pin->_sigCharge[0][i];
+	      chargeP[i] = pin->_sigNormCharge[0][i];
+	      errP[i] = pin->_sigChargeError[0][i];
+	      histRef->Fill(pin->_bmValue[i]);
 	      nEv++;
 	    }
 	  //Average Charge in Pin
@@ -237,14 +241,14 @@ void analyzeSlappPads(const char *pad, const char *area)
 	  for(Int_t i=0; i<nVL; ++i)
 	    {
 	      // Store Laser reference amplitude
-	      if(lgad._bmON)
+	      if(lgad->_bmON)
 		{
-		  histRef->Fill(lgad._bmValue[i]);
+		  histRef->Fill(lgad->_bmValue[i]);
 		  nEv++;
 		}
-	      if(noise._bmON)
+	      if(noise->_bmON)
 		{
-		  histRef->Fill(noise._bmValue[i]);
+		  histRef->Fill(noise->_bmValue[i]);
 		  nEv++;
 		}
 
@@ -252,21 +256,22 @@ void analyzeSlappPads(const char *pad, const char *area)
 	      vBias[i] = i*stepL;
 
 	      // Store noise in the pre signal region at the given bias voltage
-	      noiseSig[i] = noise._sigNoise[0][i];
+	      noiseSig[i] = noise->_sigNoise[0][i];
 
 	      // Store the signal peak value at the given bias voltage
-	      amp[i] = lgad._sigNormAmplitude[0][i];
-
+	      amp[i] = lgad->_sigNormAmplitude[0][i];
+	      ampErr[i] = noise->_sigAmplitudeError[0][i];
+	      
 	      // Store signal charge at the given bias voltage
-	      charge[i] = lgad._sigNormCharge[0][i];
-	      chargeErr[i] = lgad._sigChargeError[0][i];
+	      charge[i] = lgad->_sigNormCharge[0][i];
+	      chargeErr[i] = lgad->_sigChargeError[0][i];
 
 	      // Calculate and store the signal to noise ratio
 	      snr[i] = amp[i]/noiseSig[i];
 
 	      // Evaluate gain of the sensor
-	      gain[i] = lgad._sigNormCharge[0][i]/avgQ;
-	      gainErr[i] = gain[i]*TMath::Sqrt(TMath::Power(lgad._sigChargeError[0][i]/lgad._sigNormCharge[0][i],2)+TMath::Power(errAvg/avgQ,2));
+	      gain[i] = lgad->_sigNormCharge[0][i]/avgQ;
+	      gainErr[i] = gain[i]*TMath::Sqrt(TMath::Power(lgad->_sigChargeError[0][i]/lgad->_sigNormCharge[0][i],2)+TMath::Power(errAvg/avgQ,2));
 	      
 	      if( i>=20 && i%5==0)
 		{
@@ -274,19 +279,19 @@ void analyzeSlappPads(const char *pad, const char *area)
 		  vBiasReduced[(i-20)/5] = i*stepL;
 
 		  // Store the rise time of the signal and the error in RT
-		  rt[(i-20)/5] = lgad._sigRiseTime[0][i];
-		  rtErr[(i-20)/5] = lgad._sigRiseTimeError[0][i];
+		  rt[(i-20)/5] = lgad->_sigRiseTime[0][i];
+		  rtErr[(i-20)/5] = lgad->_sigRiseTimeError[0][i];
 
 		  // Evaluate jitter at the given bias voltage
-		  if(lgad._sigSlewRate[0][i] == 0)
+		  if(lgad->_sigSlewRate[0][i] == 0)
 		    {
 		      jitter[(i-20)/5] = 0;
 		      jitterErr[(i-20)/5] = 0;
 		    }
 		  else
 		    {
-		      jitter[(i-20)/5] = 1000 * noise._sigNoise[0][i] / lgad._sigSlewRate[0][i];
-		      jitterErr[(i-20)/5] = (jitter[(i-20)/5] / lgad._sigSlewRate[0][i]) * lgad._sigSlewRateError[0][i];
+		      jitter[(i-20)/5] = 1000 * noise->_sigNoise[0][i] / lgad->_sigSlewRate[0][i];
+		      jitterErr[(i-20)/5] = (jitter[(i-20)/5] / lgad->_sigSlewRate[0][i]) * lgad->_sigSlewRateError[0][i];
 		    }
 		}
 	    }
@@ -298,37 +303,37 @@ void analyzeSlappPads(const char *pad, const char *area)
 	    vBiasReduced[(i-20)/5] = i*stepL;
 
 	    // Store noise in the pre signal region at the given bias voltage
-	    noiseSig[(i-20)/5] = noise._sigNoise[0][i];
+	    noiseSig[(i-20)/5] = noise->_sigNoise[0][i];
 
 	    // Store the signal peak value at the given bias voltage
-	    amp[(i-20)/5] = lgad._sigNormAmplitude[0][i];
+	    amp[(i-20)/5] = lgad->_sigNormAmplitude[0][i];
 
 	    // Store signal charge at the given bias voltage
-	    charge[(i-20)/5] = lgad._sigNormCharge[0][i];
-	    chargeErr[(i-20)/5] = lgad._sigChargeError[0][i];
+	    charge[(i-20)/5] = lgad->_sigNormCharge[0][i];
+	    chargeErr[(i-20)/5] = lgad->_sigChargeError[0][i];
 	  
 	    // Store the rise time of the signal and the error in RT
-	    rt[(i-20)/5] = lgad._sigRiseTime[0][i];
-	    rtErr[(i-20)/5] = lgad._sigRiseTimeError[0][i];
+	    rt[(i-20)/5] = lgad->_sigRiseTime[0][i];
+	    rtErr[(i-20)/5] = lgad->_sigRiseTimeError[0][i];
 
 	    // Calculate and store the signal to noise ratio
 	    snr[(i-20)/5] = amp[(i-20)/5]/noiseSig[(i-20)/5];
 
 	    // Evaluate jitter at the given bias voltage
-	    if(lgad._sigSlewRate[0][i] == 0)
+	    if(lgad->_sigSlewRate[0][i] == 0)
 	    {
 	    jitter[(i-20)/5] = 0;
 	    jitterErr[(i-20)/5] = 0;
 	    }
 	    else
 	    {
-	    jitter[(i-20)/5] = 1000 * noise._sigNoise[0][i] / lgad._sigSlewRate[0][i];
-	    jitterErr[(i-20)/5] = (jitter[(i-20)/5] / lgad._sigSlewRate[0][i]) * lgad._sigSlewRateError[0][i];
+	    jitter[(i-20)/5] = 1000 * noise->_sigNoise[0][i] / lgad->_sigSlewRate[0][i];
+	    jitterErr[(i-20)/5] = (jitter[(i-20)/5] / lgad->_sigSlewRate[0][i]) * lgad->_sigSlewRateError[0][i];
 	    }
 
 	    // Evaluate gain of the sensor
-	    gain[(i-20)/5] = lgad._sigNormCharge[0][i]/avgQ;
-	    gainErr[(i-20)/5] = gain[(i-20)/5]*TMath::Sqrt(TMath::Power(lgad._sigChargeError[0][i]/lgad._sigNormCharge[0][i],2)+TMath::Power(errAvg/avgQ,2));
+	    gain[(i-20)/5] = lgad->_sigNormCharge[0][i]/avgQ;
+	    gainErr[(i-20)/5] = gain[(i-20)/5]*TMath::Sqrt(TMath::Power(lgad->_sigChargeError[0][i]/lgad->_sigNormCharge[0][i],2)+TMath::Power(errAvg/avgQ,2));
 	    }
 	  */
 
@@ -356,16 +361,16 @@ void analyzeSlappPads(const char *pad, const char *area)
 
 	  for(Int_t i=0; i<nVL; ++i)
 	    {
-	      Jitter[k/3][i] = 1000 * noise._sigNoise[0][i] / lgad._sigSlewRate[0][i];
-	      JitterError[k/3][i] = (Jitter[k/3][i]/ lgad._sigSlewRate[0][i]) * lgad._sigSlewRateError[0][i];
-	      Gain[k/3][i] = lgad._sigNormCharge[0][i]/avgQ;
-	      GainError[k/3][i] = Gain[k/3][i]*TMath::Sqrt(TMath::Power(lgad._sigChargeError[0][i]/lgad._sigNormCharge[0][i],2)+TMath::Power(errAvg/avgQ,2));
+	      Jitter[k/3][i] = 1000 * noise->_sigNoise[0][i] / lgad->_sigSlewRate[0][i];
+	      JitterError[k/3][i] = (Jitter[k/3][i]/ lgad->_sigSlewRate[0][i]) * lgad->_sigSlewRateError[0][i];
+	      Gain[k/3][i] = lgad->_sigNormCharge[0][i]/avgQ;
+	      GainError[k/3][i] = Gain[k/3][i]*TMath::Sqrt(TMath::Power(lgad->_sigChargeError[0][i]/lgad->_sigNormCharge[0][i],2)+TMath::Power(errAvg/avgQ,2));
 	      //Store Signal at 240 V
 	      if(i*stepL == 240)
 		{
-		  pulseShape[k/3] = (TH1F*) lgad._histo[0][i]->Clone();
-		  pulseShape[k/3]->Scale(lgad._polarity);
-		  //pulseShape[k/3]->Scale(1/lgad._bmValue[i]);
+		  pulseShape[k/3] = (TH1F*) lgad->_histo[0][i]->Clone();
+		  pulseShape[k/3]->Scale(lgad->_polarity);
+		  //pulseShape[k/3]->Scale(1/lgad->_bmValue[i]);
 		}
 	    }
 	  
@@ -374,11 +379,11 @@ void analyzeSlappPads(const char *pad, const char *area)
 	    for(Int_t i=0; i<nVP; ++i)
 	      {
 		vBiasPin[k/9][i] = i*stepP;
-		noisePin[k/9][i] = pin._sigNoise[0][i];
-		JitterPin[k/9][i] = (1000 * pin._sigNoise[0][i] * pin._sigRiseTime[0][i]) / (0.8*pin._sigAmplitude[0][i]);
+		noisePin[k/9][i] = pin->_sigNoise[0][i];
+		JitterPin[k/9][i] = (1000 * pin->_sigNoise[0][i] * pin->_sigRiseTime[0][i]) / (0.8*pin->_sigAmplitude[0][i]);
 		JitterPinError[k/9][i] = 0;
-		rtPin[k/9][i] = 1000 * pin._sigRiseTime[0][i];
-		rtPinError[k/9][i] = TMath::Sqrt(2) * pin._deltaT;
+		rtPin[k/9][i] = 1000 * pin->_sigRiseTime[0][i];
+		rtPinError[k/9][i] = TMath::Sqrt(2) * pin->_deltaT;
 	      }
 
 	  /*
@@ -388,11 +393,11 @@ void analyzeSlappPads(const char *pad, const char *area)
 	    ChargePinError[k/9] = errAvg;
 	    if(i*stepP == 240)
 	    {
-	    //cout<<Form("\033[1;31mPin Noise: %.2lf mV \t Pin RT: %.2lf ps \033[0m\n", pin._sigNoise[0][i], 1000 * pin._sigRiseTime[0][i]);
-	    JitterPin[k/9] = (1000 * pin._sigNoise[0][i] * pin._sigRiseTime[0][i]) / (0.8*pin._sigAmplitude[0][i]);
+	    //cout<<Form("\033[1;31mPin Noise: %.2lf mV \t Pin RT: %.2lf ps \033[0m\n", pin->_sigNoise[0][i], 1000 * pin->_sigRiseTime[0][i]);
+	    JitterPin[k/9] = (1000 * pin->_sigNoise[0][i] * pin->_sigRiseTime[0][i]) / (0.8*pin->_sigAmplitude[0][i]);
 	    JitterPinError[k/9] = 0;
-	    rtPin[k/9] = 1000 * pin._sigRiseTime[0][i];
-	    rtPinError[k/9] = TMath::Sqrt(2) * pin._deltaT;
+	    rtPin[k/9] = 1000 * pin->_sigRiseTime[0][i];
+	    rtPinError[k/9] = TMath::Sqrt(2) * pin->_deltaT;
 	    }
 	    }
 	  */
@@ -406,7 +411,7 @@ void analyzeSlappPads(const char *pad, const char *area)
 	  grN->SetLineWidth(2);
 	  grN->SetMarkerSize(mSize[k/3]);
 
-	  grA = new TGraphErrors(nVL,vBias,amp,0,noiseSig);
+	  grA = new TGraphErrors(nVL,vBias,amp,0,ampErr);
 	  grA->SetMarkerStyle(mStyle[k/3]);
 	  grA->SetMarkerColor(mCol[k/3]);
 	  grA->SetLineColor(mCol[k/3]);
@@ -490,7 +495,7 @@ void analyzeSlappPads(const char *pad, const char *area)
 	      histJ[0]->GetYaxis()->SetTitle("Noise (mV)");
 	      grN->Draw("eplsame");
 	      legT->Draw();
-	      TLine *lineN = new TLine(50, 2, 610, 2);
+	      TLine *lineN = new TLine(0, 2, 610, 2);
 	      lineN->SetLineColor(kBlack);
 	      lineN->SetLineWidth(4);
 	      lineN->SetLineStyle(9);
@@ -526,7 +531,7 @@ void analyzeSlappPads(const char *pad, const char *area)
 	      TLine *lineRT[2];
 	      for(Int_t i=0;i<3;++i)
 		{
-		  lineRT[i] = new TLine(50, 0.5*(i+1), 610, 0.5*(i+1));
+		  lineRT[i] = new TLine(0, 0.5*(i+1), 610, 0.5*(i+1));
 		  lineRT[i]->SetLineColor(kBlack);
 		  lineRT[i]->SetLineWidth(4);
 		  lineRT[i]->SetLineStyle(9);
@@ -542,7 +547,7 @@ void analyzeSlappPads(const char *pad, const char *area)
 	      TLine *lineJ[2];
 	      for(Int_t i=0;i<2;++i)
 		{
-		  lineJ[i] = new TLine(50, 50*(i+1), 610, 50*(i+1));
+		  lineJ[i] = new TLine(0, 50*(i+1), 610, 50*(i+1));
 		  lineJ[i]->SetLineColor(kBlack);
 		  lineJ[i]->SetLineWidth(4);
 		  lineJ[i]->SetLineStyle(9);
@@ -581,19 +586,19 @@ void analyzeSlappPads(const char *pad, const char *area)
 	    legN->AddEntry(grN, legend, "epl");
 
 	  canA->cd();
-	  histJ[1]->GetYaxis()->SetRangeUser(0,1600);
+	  histJ[1]->GetYaxis()->SetRangeUser(0,1.6);
 	  histJ[1]->GetXaxis()->SetRangeUser(0,610);
 	  if(type=="1")
 	    legA->AddEntry(grA, legend, "epl");
 
 	  canC->cd();
-	  histJ[2]->GetYaxis()->SetRangeUser(0,300);
+	  histJ[2]->GetYaxis()->SetRangeUser(0,0.3);
 	  histJ[2]->GetXaxis()->SetRangeUser(0,610);
 	  if(type=="1")
 	    legC->AddEntry(grC, legend, "epl");
 
 	  canSNR->cd();
-	  histJ[3]->GetYaxis()->SetRangeUser(0,1000);
+	  histJ[3]->GetYaxis()->SetRangeUser(0,1);
 	  histJ[3]->GetXaxis()->SetRangeUser(0,610);
 	  if(type=="1")
 	    legSNR->AddEntry(grSNR, legend, "epl");
@@ -720,7 +725,7 @@ void analyzeSlappPads(const char *pad, const char *area)
   //============================================Laser Stability================================================
   //Laser stability check
   //Draw a histogram of reference sensor amplitude
-  if(processJitter && plotLaserStability)
+  if(processJitter && plotLaserStability && strcmp(pad, "C")==0)
     {
       TCanvas *canLas = new TCanvas("canLas","",1200,1000);
       TLegend *legLas = new TLegend(0.85,0.95,0.65,0.65,NULL,"brNDC");
@@ -728,16 +733,21 @@ void analyzeSlappPads(const char *pad, const char *area)
 
       histRef->GetXaxis()->SetTitle("Reference amplitude (mV)");
       histRef->GetYaxis()->SetTitle("Counts");
+      histRef->SetMarkerStyle(21);
+      histRef->SetMarkerColor(kRed);
+      histRef->SetMarkerSize(2);
       histRef->SetLineColor(kRed);
       histRef->SetLineWidth(2);
-      histRef->Draw();
-      histRef->GetXaxis()->SetRangeUser(1.1,1.25);
+      histRef->Draw("E1P");
+      histRef->GetXaxis()->SetRangeUser(120,250);
+      //histRef->GetYaxis()->SetRangeUser(0,20);
       Float_t mean = histRef->GetMean();
       Float_t height = histRef->GetBinContent(histRef->GetMaximumBin());
       Float_t stdDev = histRef->GetStdDev();
-      TF1 *Gaus = new TF1("Gaus", "[0]*TMath::Exp(-0.5*TMath::Power(((x-[1])/[2]),2))", 1.13, 1.2);
+      //TF1 *Gaus = new TF1("Gaus", "[0]*TMath::Exp(-0.5*TMath::Power(((x-[1])/[2]),2))", 1.13, 1.2);
+      TF1 *Gaus = new TF1("Gaus", "[0]*TMath::Exp(-0.5*TMath::Power(((x-[1])/[2]),2))", 100, 220);
       Gaus->SetParameters(height, mean, stdDev);
-      histRef->Fit("Gaus", "RMS+");
+      histRef->Fit("Gaus", "IRMS+");
       Gaus->SetLineColor(kBlue);
       Gaus->SetLineWidth(2);
       Gaus->Draw("LSAME");
@@ -747,6 +757,7 @@ void analyzeSlappPads(const char *pad, const char *area)
       TText *ptstats4_LaTex = ptstats4->AddText("Laser stability");
       ptstats4_LaTex = ptstats4->AddText(Form("Events: %d",nEv));
       ptstats4_LaTex = ptstats4->AddText(Form("#chi^{2}/ndf: %2.0lf / %d", Gaus->GetChisquare(), Gaus->GetNDF()));
+      //ptstats4_LaTex = ptstats4->AddText(Form("#chi^{2}/ndf: %2.0lf", Gaus->GetChisquare()/Gaus->GetNDF()));
       ptstats4_LaTex = ptstats4->AddText(Form("Mean : %2.2e #pm %2.2e mV", Gaus->GetParameter(1),Gaus->GetParError(1)));
       ptstats4_LaTex = ptstats4->AddText(Form("Sigma: %2.2e #pm %2.2e mV", TMath::Abs(Gaus->GetParameter(2)),Gaus->GetParError(2)));
       ptstats4->Draw();
@@ -971,21 +982,21 @@ cout<<"\033[1;32mProcessing File: "<<gainFiles[k]<<"\033[0m"<<endl;
 
 //Read LGAD data
 AnalyzeTCTData lgad(gainFiles[k]);
-lgad.CorrectBaseline();
-lgad.CalcNoise();
-lgad.SetIntegralLimits(0, 50.);
-lgad.CalculateWaveformProperties();
+lgad->CorrectBaseline();
+lgad->CalcNoise();
+lgad->SetIntegralLimits(0, 50.);
+lgad->CalculateWaveformProperties();
         
 cout<<"\033[1;32mProcessing File: "<<gainFiles[k+1]<<"\033[0m"<<endl;
 //Read PIN data
 AnalyzeTCTData pin(gainFiles[k+1], 0.9);
-pin.CorrectBaseline();
-pin.CalcNoise();
-pin.SetIntegralLimits(0, 50.);
-pin.CalculateWaveformProperties();
+pin->CorrectBaseline();
+pin->CalcNoise();
+pin->SetIntegralLimits(0, 50.);
+pin->CalculateWaveformProperties();
         
-Int_t nVL = lgad._nV1; //Number of Voltage points for LGAD
-Int_t nVP = pin._nV1; //Number of Voltage points for PIN
+Int_t nVL = lgad->_nV1; //Number of Voltage points for LGAD
+Int_t nVP = pin->_nV1; //Number of Voltage points for PIN
 
 vector<Float_t> chargeL(nVL);
 vector<Float_t> errL(nVL);
@@ -1000,9 +1011,9 @@ Float_t errG[arrS];
         
 for(Int_t i=0; i< nVP; ++i)
 {
-chargeP[i] = pin._sigNormCharge[0][i];
-errP[i] = pin._sigChargeError[0][i];
-histRef->Fill(pin._bmValue[i]);
+chargeP[i] = pin->_sigNormCharge[0][i];
+errP[i] = pin->_sigChargeError[0][i];
+histRef->Fill(pin->_bmValue[i]);
 nEv++;
 }
 
@@ -1011,15 +1022,15 @@ Float_t avgQ = TMath::Mean(chargeP.begin()+10,chargeP.end());
 //Error in Average Charge
 Float_t errAvg = TMath::StdDev(chargeP.begin()+10,chargeP.end())/TMath::Sqrt(nVP-10);
         
-Float_t step = TMath::Abs(lgad._tct->V1[1]-lgad._tct->V1[0]);
+Float_t step = TMath::Abs(lgad->_tct->V1[1]-lgad->_tct->V1[0]);
 
 
 // for(Int_t i=10; i<nVL; i+=5)
 // {
 // voltage[(i-10)/5] = i*step;
-// chargeL[i] = lgad._sigNormCharge[0][i];
-// errL[i] = lgad._sigChargeError[0][i];
-// gain[(i-10)/5] = lgad._sigNormCharge[0][i]/avgQ;
+// chargeL[i] = lgad->_sigNormCharge[0][i];
+// errL[i] = lgad->_sigChargeError[0][i];
+// gain[(i-10)/5] = lgad->_sigNormCharge[0][i]/avgQ;
 // errG[(i-10)/5] = gain[(i-10)/5]*TMath::Sqrt(TMath::Power(errL[i]/chargeL[i],2)+TMath::Power(errAvg/avgQ,2));
 // }
 
@@ -1030,9 +1041,9 @@ GainError[k/2] = new Float_t[nVL];
 for(Int_t i=0; i<arrS; ++i)
 {
 voltage[i] = i*step;
-chargeL[i] = lgad._sigNormCharge[0][i];
-errL[i] = lgad._sigChargeError[0][i];
-gain[i] = lgad._sigNormCharge[0][i]/avgQ;
+chargeL[i] = lgad->_sigNormCharge[0][i];
+errL[i] = lgad->_sigChargeError[0][i];
+gain[i] = lgad->_sigNormCharge[0][i]/avgQ;
 errG[i] = gain[i]*TMath::Sqrt(TMath::Power(errL[i]/chargeL[i],2)+TMath::Power(errAvg/avgQ,2));
 Gain[k/2][i] = gain[i];
 GainError[k/2][i] = errG[i];

@@ -22,7 +22,7 @@ AnalyzeTCTData::AnalyzeTCTData(const char* inFile)
   _termination = 50;
   _polarity = -1;
   _tmin = 0.;
-  _tmax = 20.;
+  _tmax = 40.;
   _noise = 0;
   _nAC = 0;
   //Noise level in TCT setup is about 1.8mV, a threshold of 4 Sigma should be used
@@ -666,13 +666,13 @@ void AnalyzeTCTData::SaveSignalShape()
 	  signal->GetXaxis()->SetTitle("Time (ns)");
 	  signal->GetYaxis()->SetTitle("Voltage (mV)");
 	  signal->GetYaxis()->SetRangeUser(maxSignal->GetMinimum()-1, maxSignal->GetMaximum()+1);
-	  //signal->GetXaxis()->SetRangeUser(0, 50);
+	  signal->GetXaxis()->SetRangeUser(0, 20);
         }
       else
         {
 	  signal->Draw("HIST LSAME");
 	  signal->GetYaxis()->SetRangeUser(maxSignal->GetMinimum()-1, maxSignal->GetMaximum()+1);
-	  //signal->GetXaxis()->SetRangeUser(0, 50);
+	  signal->GetXaxis()->SetRangeUser(0, 20);
         }
     }
   cout<<"[ STATUS] Saving Signal...\n";

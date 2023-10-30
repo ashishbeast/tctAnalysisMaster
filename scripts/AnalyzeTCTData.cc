@@ -19,22 +19,22 @@ using namespace std;
 AnalyzeTCTData::AnalyzeTCTData(const char* inFile)
 {
   //Set Parameters
-  _deltaT = 0.05; // 50 ps
-  _nAvOsc = 256;
-  _termination = 50;
-  _polarity = -1;
-  _tmin = 0.;
-  _tmax = 30.;
-  _noise = 0;
-  _nAC = 0.;
-  _threshold = 7.2; // The maximum signal should be over 8 mV for a given data to consider the data consists a signal from the sensor
+  _deltaT = 0.05;    // Oscilloscope time bin: 50 ps
+  _nAvOsc = 256;     // number of averages in oscilloscope
+  _termination = 50; // Input impedence 
+  _polarity = -1;    // Polarity of signals
+  _tmin = 0.;        // Start of the signal
+  _tmax = 30.;       // upper limit for integral of signal
+  _noise = 0;        // Average noise in system
+  _nAC = 0.;         // Number of active channel
+  _threshold = 7.2;  // The maximum signal should be over 8 mV for a given data to consider the data consists a signal from the sensor
 
   TString filename = inFile;
   _filePath = filename.Tokenize("/");
   _fileName = ((TObjString *)(_filePath->At(_filePath->GetEntries()-1)))->String();
   _fileName = _fileName.ReplaceAll(".tct", "");
   _outFile = "figures/"+_fileName;
-  
+
   SetCanvasSettings(false);
     
   //Read the TCT File without any shift
@@ -66,76 +66,77 @@ AnalyzeTCTData::AnalyzeTCTData(const char* inFile)
   _nV2 = _tct->nV2;
     
   //Allocate Memory for variables
-  _histo         = new TH1F**[_nAC];
-  _sigNoise     = new Float_t*[_nAC];
-  _sigCharge     = new Float_t*[_nAC];
-  _sigChargeError= new Float_t*[_nAC];
-  _sigAmplitude  = new Float_t*[_nAC];
+  _histo             = new TH1F**[_nAC];
+  _sigNoise          = new Float_t*[_nAC];
+  _sigCharge         = new Float_t*[_nAC];
+  _sigChargeError    = new Float_t*[_nAC];
+  _sigAmplitude      = new Float_t*[_nAC];
   _sigAmplitudeError = new Float_t*[_nAC];
-  _snr = new Float_t*[_nAC];
-  _sigRatio         = new Float_t*[_nAC];
-  _sigRatioError    = new Float_t*[_nAC];
-  _sigRiseTime   = new Float_t*[_nAC];
-  _sigRiseTimeError   = new Float_t*[_nAC];
-  _sigSlope   = new Float_t*[_nAC];
-  _sigSlopeError   = new Float_t*[_nAC];
-  _sigMaxSlope   = new Float_t*[_nAC];
-  _sigMaxSlopeError   = new Float_t*[_nAC];
-  _sigSlewRate   = new Float_t*[_nAC];
-  _sigSlewRateError   = new Float_t*[_nAC];
-  _sigJitter   = new Float_t*[_nAC];
-  _sigJitterError   = new Float_t*[_nAC];
-  _sigTOA        = new Float_t*[_nAC];
-  _sigTOAError        = new Float_t*[_nAC];
-  _sigTOT        = new Float_t*[_nAC];
-  _sigTOTError        = new Float_t*[_nAC];
-  _sigCFD        = new Float_t**[_nAC];
-  _sigCFDError        = new Float_t**[_nAC];
+  _snr               = new Float_t*[_nAC];
+  _sigRatio          = new Float_t*[_nAC];
+  _sigRatioError     = new Float_t*[_nAC];
+  _sigRiseTime       = new Float_t*[_nAC];
+  _sigRiseTimeError  = new Float_t*[_nAC];
+  _sigSlope          = new Float_t*[_nAC];
+  _sigSlopeError     = new Float_t*[_nAC];
+  _sigMaxSlope       = new Float_t*[_nAC];
+  _sigMaxSlopeError  = new Float_t*[_nAC];
+  _sigSlewRate       = new Float_t*[_nAC];
+  _sigSlewRateError  = new Float_t*[_nAC];
+  _sigJitter         = new Float_t*[_nAC];
+  _sigJitterError    = new Float_t*[_nAC];
+  _sigTOA            = new Float_t*[_nAC];
+  _sigTOAError       = new Float_t*[_nAC];
+  _sigTOT            = new Float_t*[_nAC];
+  _sigTOTError       = new Float_t*[_nAC];
+  _sigCFD            = new Float_t**[_nAC];
+  _sigCFDError       = new Float_t**[_nAC];
   if(_bmON)
     {
-      _sigNormCharge = new Float_t*[_nAC];
-      _sigNormAmplitude   = new Float_t*[_nAC];
+      _sigNormCharge    = new Float_t*[_nAC];
+      _sigNormAmplitude = new Float_t*[_nAC];
     }
     
   for(Int_t iCh = 0; iCh < _nAC; ++iCh)
     {
-      _histo[iCh]         = new TH1F*[_events];
-      _sigNoise[iCh]     = new Float_t[_events];
-      _sigCharge[iCh]     = new Float_t[_events];
-      _sigChargeError[iCh]= new Float_t[_events];
-      _sigAmplitude[iCh]  = new Float_t[_events];
+      _histo[iCh]             = new TH1F*[_events];
+      _sigNoise[iCh]          = new Float_t[_events];
+      _sigCharge[iCh]         = new Float_t[_events];
+      _sigChargeError[iCh]    = new Float_t[_events];
+      _sigAmplitude[iCh]      = new Float_t[_events];
       _sigAmplitudeError[iCh] = new Float_t[_events];
-      _snr[iCh]  = new Float_t[_events];
-      _sigRatio[iCh]         = new Float_t[_events];
-      _sigRatioError[iCh]    = new Float_t[_events];
-      _sigRiseTime[iCh]   = new Float_t[_events];
-      _sigRiseTimeError[iCh]   = new Float_t[_events];
-      _sigSlope[iCh]   = new Float_t[_events];
-      _sigSlopeError[iCh]   = new Float_t[_events];
-      _sigSlewRate[iCh]   = new Float_t[_events];
-      _sigSlewRateError[iCh]   = new Float_t[_events];
-      _sigMaxSlope[iCh]   = new Float_t[_events];
-      _sigMaxSlopeError[iCh]   = new Float_t[_events];
-      _sigJitter[iCh]   = new Float_t[_events];
-      _sigJitterError[iCh]   = new Float_t[_events];
-      _sigTOA[iCh]        = new Float_t[_events];
-      _sigTOAError[iCh]        = new Float_t[_events];
-      _sigTOT[iCh]        = new Float_t[_events];
-      _sigTOTError[iCh]        = new Float_t[_events];
-      _sigCFD[iCh]        = new Float_t*[_events];
-      _sigCFDError[iCh]        = new Float_t*[_events];
+      _snr[iCh]               = new Float_t[_events];
+      _sigRatio[iCh]          = new Float_t[_events];
+      _sigRatioError[iCh]     = new Float_t[_events];
+      _sigRiseTime[iCh]       = new Float_t[_events];
+      _sigRiseTimeError[iCh]  = new Float_t[_events];
+      _sigSlope[iCh]          = new Float_t[_events];
+      _sigSlopeError[iCh]     = new Float_t[_events];
+      _sigSlewRate[iCh]       = new Float_t[_events];
+      _sigSlewRateError[iCh]  = new Float_t[_events];
+      _sigMaxSlope[iCh]       = new Float_t[_events];
+      _sigMaxSlopeError[iCh]  = new Float_t[_events];
+      _sigJitter[iCh]         = new Float_t[_events];
+      _sigJitterError[iCh]    = new Float_t[_events];
+      _sigTOA[iCh]            = new Float_t[_events];
+      _sigTOAError[iCh]       = new Float_t[_events];
+      _sigTOT[iCh]            = new Float_t[_events];
+      _sigTOTError[iCh]       = new Float_t[_events];
+      _sigCFD[iCh]            = new Float_t*[_events];
+      _sigCFDError[iCh]       = new Float_t*[_events];
+
       for(Int_t evt = 0; evt < _events; ++evt)
 	{
-	  _sigCFD[iCh][evt] = new Float_t[9];     // 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90%
+	  _sigCFD[iCh][evt]      = new Float_t[9];     // 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90%
 	  _sigCFDError[iCh][evt] = new Float_t[9];     // 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90%
 	}
+
       if(_bmON)
         {
 	  if(iCh == 0)
 	    _bmValue       = new Float_t[_events];
-	  
-	  _sigNormCharge[iCh] = new Float_t[_events];
-	  _sigNormAmplitude[iCh]   = new Float_t[_events];
+	  _sigNormCharge[iCh]    = new Float_t[_events];
+	  _sigNormAmplitude[iCh] = new Float_t[_events];
         }
     }
     
@@ -143,19 +144,19 @@ AnalyzeTCTData::AnalyzeTCTData(const char* inFile)
   _zValue = new Float_t**[7];
   _map = new TH2F*[7];
   _canvasMap = new TCanvas*[7];
-    
-  //correct the Baseline shift, calculate Baseline Noise
 }
 
 AnalyzeTCTData::AnalyzeTCTData(const char* inFile, Float_t threshold)
 {
   //Set Parameters
-  _termination = 50;
-  _polarity = -1;
-  _tmin = 0.;
-  _tmax = 40.;
-  _noise = 0;
-  _nAC = 0.;
+  _deltaT = 0.05;         // Oscilloscope time bin: 50 ps
+  _nAvOsc = 256;          // number of averages in oscilloscope
+  _termination = 50;      // Input impedence 
+  _polarity = -1;         // Polarity of signals
+  _tmin = 0.;             // Start of the signal
+  _tmax = 30.;            // upper limit for integral of signal
+  _noise = 0;             // Average noise in system
+  _nAC = 0.;              // Number of active channel
   _threshold = threshold; // The maximum signal should be over 8 mV for a given data to consider the data consists a signal from the sensor
 
   TString filename = inFile;
@@ -199,31 +200,31 @@ AnalyzeTCTData::AnalyzeTCTData(const char* inFile, Float_t threshold)
   _nV2 = _tct->nV2;    
 
   //Allocate Memory for variables
-  _histo         = new TH1F**[_nAC];
-  _sigNoise     = new Float_t*[_nAC];
-  _sigCharge     = new Float_t*[_nAC];
-  _sigChargeError= new Float_t*[_nAC];
-  _sigAmplitude  = new Float_t*[_nAC];
+  _histo             = new TH1F**[_nAC];
+  _sigNoise          = new Float_t*[_nAC];
+  _sigCharge         = new Float_t*[_nAC];
+  _sigChargeError    = new Float_t*[_nAC];
+  _sigAmplitude      = new Float_t*[_nAC];
   _sigAmplitudeError = new Float_t*[_nAC];
-  _snr = new Float_t*[_nAC];
-  _sigRatio         = new Float_t*[_nAC];
-  _sigRatioError    = new Float_t*[_nAC];
-  _sigRiseTime   = new Float_t*[_nAC];
-  _sigRiseTimeError   = new Float_t*[_nAC];
-  _sigSlope   = new Float_t*[_nAC];
-  _sigSlopeError   = new Float_t*[_nAC];
-  _sigMaxSlope   = new Float_t*[_nAC];
-  _sigMaxSlopeError   = new Float_t*[_nAC];
-  _sigSlewRate   = new Float_t*[_nAC];
-  _sigSlewRateError   = new Float_t*[_nAC];
-  _sigJitter   = new Float_t*[_nAC];
-  _sigJitterError   = new Float_t*[_nAC];
-  _sigTOA        = new Float_t*[_nAC];
-  _sigTOAError        = new Float_t*[_nAC];
-  _sigTOT        = new Float_t*[_nAC];
-  _sigTOTError        = new Float_t*[_nAC];
-  _sigCFD        = new Float_t**[_nAC];
-  _sigCFDError        = new Float_t**[_nAC];
+  _snr               = new Float_t*[_nAC];
+  _sigRatio          = new Float_t*[_nAC];
+  _sigRatioError     = new Float_t*[_nAC];
+  _sigRiseTime       = new Float_t*[_nAC];
+  _sigRiseTimeError  = new Float_t*[_nAC];
+  _sigSlope          = new Float_t*[_nAC];
+  _sigSlopeError     = new Float_t*[_nAC];
+  _sigMaxSlope       = new Float_t*[_nAC];
+  _sigMaxSlopeError  = new Float_t*[_nAC];
+  _sigSlewRate       = new Float_t*[_nAC];
+  _sigSlewRateError  = new Float_t*[_nAC];
+  _sigJitter         = new Float_t*[_nAC];
+  _sigJitterError    = new Float_t*[_nAC];
+  _sigTOA            = new Float_t*[_nAC];
+  _sigTOAError       = new Float_t*[_nAC];
+  _sigTOT            = new Float_t*[_nAC];
+  _sigTOTError       = new Float_t*[_nAC];
+  _sigCFD            = new Float_t**[_nAC];
+  _sigCFDError       = new Float_t**[_nAC];
   if(_bmON)
     {
       _sigNormCharge = new Float_t*[_nAC];
@@ -232,43 +233,44 @@ AnalyzeTCTData::AnalyzeTCTData(const char* inFile, Float_t threshold)
     
   for(Int_t iCh = 0; iCh < _nAC; ++iCh)
     {
-      _histo[iCh]         = new TH1F*[_events];
-      _sigNoise[iCh]     = new Float_t[_events];
-      _sigCharge[iCh]     = new Float_t[_events];
-      _sigChargeError[iCh]= new Float_t[_events];
-      _sigAmplitude[iCh]  = new Float_t[_events];
+      _histo[iCh]             = new TH1F*[_events];
+      _sigNoise[iCh]          = new Float_t[_events];
+      _sigCharge[iCh]         = new Float_t[_events];
+      _sigChargeError[iCh]    = new Float_t[_events];
+      _sigAmplitude[iCh]      = new Float_t[_events];
       _sigAmplitudeError[iCh] = new Float_t[_events];
-      _snr[iCh]  = new Float_t[_events];
-      _sigRatio[iCh]         = new Float_t[_events];
-      _sigRatioError[iCh]    = new Float_t[_events];
-      _sigRiseTime[iCh]   = new Float_t[_events];
-      _sigRiseTimeError[iCh]   = new Float_t[_events];
-      _sigSlope[iCh]   = new Float_t[_events];
-      _sigSlopeError[iCh]   = new Float_t[_events];
-      _sigSlewRate[iCh]   = new Float_t[_events];
-      _sigSlewRateError[iCh]   = new Float_t[_events];
-      _sigMaxSlope[iCh]   = new Float_t[_events];
-      _sigMaxSlopeError[iCh]   = new Float_t[_events];
-      _sigJitter[iCh]   = new Float_t[_events];
-      _sigJitterError[iCh]   = new Float_t[_events];
-      _sigTOA[iCh]        = new Float_t[_events];
-      _sigTOAError[iCh]        = new Float_t[_events];
-      _sigTOT[iCh]        = new Float_t[_events];
-      _sigTOTError[iCh]        = new Float_t[_events];
-      _sigCFD[iCh]        = new Float_t*[_events];
-      _sigCFDError[iCh]        = new Float_t*[_events];
+      _snr[iCh]               = new Float_t[_events];
+      _sigRatio[iCh]          = new Float_t[_events];
+      _sigRatioError[iCh]     = new Float_t[_events];
+      _sigRiseTime[iCh]       = new Float_t[_events];
+      _sigRiseTimeError[iCh]  = new Float_t[_events];
+      _sigSlope[iCh]          = new Float_t[_events];
+      _sigSlopeError[iCh]     = new Float_t[_events];
+      _sigSlewRate[iCh]       = new Float_t[_events];
+      _sigSlewRateError[iCh]  = new Float_t[_events];
+      _sigMaxSlope[iCh]       = new Float_t[_events];
+      _sigMaxSlopeError[iCh]  = new Float_t[_events];
+      _sigJitter[iCh]         = new Float_t[_events];
+      _sigJitterError[iCh]    = new Float_t[_events];
+      _sigTOA[iCh]            = new Float_t[_events];
+      _sigTOAError[iCh]       = new Float_t[_events];
+      _sigTOT[iCh]            = new Float_t[_events];
+      _sigTOTError[iCh]       = new Float_t[_events];
+      _sigCFD[iCh]            = new Float_t*[_events];
+      _sigCFDError[iCh]       = new Float_t*[_events];
+       
       for(Int_t evt = 0; evt < _events; ++evt)
 	{
-	  _sigCFD[iCh][evt] = new Float_t[9];     // 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90%
+	  _sigCFD[iCh][evt]      = new Float_t[9];     // 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90%
 	  _sigCFDError[iCh][evt] = new Float_t[9];     // 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90%
 	}
+
       if(_bmON)
         {
 	  if(iCh == 0)
 	    _bmValue       = new Float_t[_events];
-	  
-	  _sigNormCharge[iCh] = new Float_t[_events];
-	  _sigNormAmplitude[iCh]   = new Float_t[_events];
+	  _sigNormCharge[iCh]    = new Float_t[_events];
+	  _sigNormAmplitude[iCh] = new Float_t[_events];
         }
     }
     
@@ -543,6 +545,7 @@ void AnalyzeTCTData::CalculateWaveformProperties()
 	signal = (TH1F*) _histo[i][j]->Clone();
 	signal->Scale(_polarity);
 	_sigNoise[i][j]    = CalcSignalNoise(signal);
+	//Absolute Charge
 	//Charge is calculated as the integral of the signal
 	// C = Int (Vo.dt/R) [C]
 	// C = Int (Vi.dt/R*Av) [C]
@@ -550,6 +553,10 @@ void AnalyzeTCTData::CalculateWaveformProperties()
 	// Converting Charge from C to fC
 	// C = Int(V.dt) *1000 /(R*Av) [fC]
 	_sigCharge[i][j]    = CalcCharge(signal, &_sigChargeError[i][j]) * 10;
+
+	//The error for the charge using systematic studies is 10% uncertainity.
+	_sigChargeError[i][j] = 0.1 * _sigCharge[i][j];
+	
 	_sigAmplitude[i][j] = CalcAmplitude(signal);
 	_sigAmplitudeError[i][j] = _sigNoise[i][j];
 	_snr[i][j] = _sigAmplitude[i][j]/_sigNoise[i][j];
@@ -583,7 +590,7 @@ void AnalyzeTCTData::CalculateWaveformProperties()
 	  _sigCFD[i][j][k] = CalcCFD(signal, 10*(k+1));
 	if(_bmON)
 	  {
-	    _bmValue[j] = (_tct->xCords[7][j])/1000;
+	    _bmValue[j] = _tct->xCords[7][j];
 	    _sigNormCharge[i][j] = _sigCharge[i][j]/_bmValue[j];
 	    _sigChargeError[i][j] /= _bmValue[j];
                 
@@ -606,7 +613,18 @@ void AnalyzeTCTData::CalculateSignalProperties()
 	signal = (TH1F*) _histo[i][j]->Clone();
 	signal->Scale(_polarity);
 	_sigNoise[i][j]    = CalcSignalNoise(signal);
+	//Absolute Charge
+	//Charge is calculated as the integral of the signal
+	// C = Int (Vo.dt/R) [C]
+	// C = Int (Vi.dt/R*Av) [C]
+	// Av is the amplifier gain (For Fermilab Board Av=100)
+	// Converting Charge from C to fC
+	// C = Int(V.dt) *1000 /(R*Av) [fC]
 	_sigCharge[i][j]    = CalcCharge(signal, &_sigChargeError[i][j]) * 10;
+
+	//The error for the charge using systematic studies is 10% uncertainity.
+	_sigChargeError[i][j] = 0.1 * _sigCharge[i][j];
+
 	_sigAmplitude[i][j] = CalcAmplitude(signal);
 	_sigAmplitudeError[i][j] = _sigNoise[i][j];
 	if(_sigCharge[i][j] == 0.)
@@ -630,9 +648,11 @@ void AnalyzeTCTData::CalculateSignalProperties()
 	  _sigCFD[i][j][k] = CalcCFD(signal, 10*(k+1));
 	if(_bmON)
 	  {
-	    _bmValue[j] = (_tct->xCords[7][j])/1000;
+	    _bmValue[j] = _tct->xCords[7][j];
 	    _sigNormCharge[i][j] = _sigCharge[i][j]/_bmValue[j];
+	    _sigChargeError[i][j] /= _bmValue[j];
 	    _sigNormAmplitude[i][j] = _sigAmplitude[i][j]/_bmValue[j];
+	    _sigAmplitudeError[i][j] /= _bmValue[j];
 	  }
       }
   printf("\033[1;34m[MESSAGE]\033[0m Finished Calculating Signal Properties!!! \n");

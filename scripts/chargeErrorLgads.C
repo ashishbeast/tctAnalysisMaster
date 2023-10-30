@@ -186,8 +186,9 @@ void analyzeChargePINs()
   TString tctFiles[nPinFiles] = {
     "../pinData/pin_W_3_type_1_pad_C_a.tct", "../pinData/pin_W_3_type_1_pad_C_b.tct",
     "../pinData/pin_W_9_type_1_pad_C_a.tct", "../pinData/pin_W_9_type_1_pad_C_b.tct",
-    "../pinData/pin_W_12_type_1_pad_C_a.tct", "../pinData/pin_W_12_type_1_pad_C_b.tct"};
- 
+   "../data/slapp_1MIP_W_14_pad_C_type_0_gain_0_VS_IR_a.tct", "../pinData/pin_W_12_type_1_pad_C_b.tct"};
+  
+  //"../pinData/pin_W_12_type_1_pad_C_a.tct", "../pinData/pin_W_12_type_1_pad_C_b.tct"
   Float_t thickness[3] = {50.0, 100.0, 150.0};
   Float_t charge[3];
   Float_t chargeErr[3];
@@ -203,17 +204,20 @@ void analyzeChargePINs()
 
       //Read data  
       AnalyzeTCTData *pin1 = new AnalyzeTCTData(tctFiles[k], 0.5);
-      pin1->SetAveragesInOscilloscope(512);
+      if(k==4)
+	pin1->SetAveragesInOscilloscope(256);
+      else
+	pin1->SetAveragesInOscilloscope(512);
       pin1->CorrectBaseline();
       pin1->CalcNoise();
-      pin1->SetIntegralLimits(0, 30.);
+      pin1->SetIntegralLimits(0, 50.);
       pin1->CalculateWaveformProperties();
 
       AnalyzeTCTData *pin2 = new AnalyzeTCTData(tctFiles[k+1], 0.5);
       pin2->SetAveragesInOscilloscope(512);
       pin2->CorrectBaseline();
       pin2->CalcNoise();
-      pin2->SetIntegralLimits(0, 30.);
+      pin2->SetIntegralLimits(0, 50.);
       pin2->CalculateWaveformProperties();
 
       //Number of Voltage points for PIN
