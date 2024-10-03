@@ -1,0 +1,17 @@
+{
+    "files.associations": {
+        "plotAmplitudeVariation.C": "cpp",
+        "plotAllWaveforms.C": "cpp"
+    }
+}
+
+{
+    "C_Cpp.autocomplete": "Enabled",
+    "C_Cpp.default.compilerPath": "~/root/bin/root",
+    "C_Cpp.default.includePath": [
+	"${default}",
+        "/home/ashish/root/include"
+    ],
+    "C_Cpp.intelliSenseEngine": "Tag Parser",
+    "C_Cpp.default.intelliSenseMode": "linux-clang-x64",
+}

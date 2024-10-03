@@ -666,13 +666,13 @@ void AnalyzeTCTData::SaveSignalShape()
 	  signal->GetXaxis()->SetTitle("Time (ns)");
 	  signal->GetYaxis()->SetTitle("Voltage (mV)");
 	  signal->GetYaxis()->SetRangeUser(maxSignal->GetMinimum()-1, maxSignal->GetMaximum()+1);
-	  signal->GetXaxis()->SetRangeUser(0, 20);
+	  //signal->GetXaxis()->SetRangeUser(0, 20);
         }
       else
         {
 	  signal->Draw("HIST LSAME");
 	  signal->GetYaxis()->SetRangeUser(maxSignal->GetMinimum()-1, maxSignal->GetMaximum()+1);
-	  signal->GetXaxis()->SetRangeUser(0, 20);
+	  //signal->GetXaxis()->SetRangeUser(0, 20);
         }
     }
   cout<<"[ STATUS] Saving Signal...\n";
@@ -1235,9 +1235,17 @@ void AnalyzeTCTData::PlotMaps(Int_t mapType)
 	  {
 	    _index = _tct->GetIndex(*s[0], *s[1], *s[2], *s[3], *s[4]);
 	    _zValue[0][j][i] = _sigCharge[iCh][_index];
-	    _zValue[1][j][i] = _sigNormCharge[iCh][_index];
 	    _zValue[2][j][i] = _sigAmplitude[iCh][_index];
-	    _zValue[3][j][i] = _sigNormAmplitude[iCh][_index];
+	    if(_bmON)
+	      {
+		_zValue[1][j][i] = _sigNormCharge[iCh][_index];
+		_zValue[3][j][i] = _sigNormAmplitude[iCh][_index];
+	      }
+	    else
+	      {
+		_zValue[1][j][i] = _sigCharge[iCh][_index];
+		_zValue[3][j][i] = _sigAmplitude[iCh][_index];
+	      }
 	    _zValue[4][j][i] = _sigRiseTime[iCh][_index];
 	    _zValue[5][j][i] = _sigCFD[iCh][_index][5];
 	    _zValue[6][j][i] = _sigCFD[iCh][_index][3];

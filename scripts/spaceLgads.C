@@ -76,9 +76,9 @@ int main()
   // B: pad with active area of 25 mm^2
   // C: pad with active area of 100 mm^2
   TMap *padArea = new TMap();
-  padArea->Add(new TObjString("A"), new TObjString("Pad area - 6.25 mm^{2}"));
-  padArea->Add(new TObjString("B"), new TObjString("Pad area - 25 mm^{2}"));
-  padArea->Add(new TObjString("C"), new TObjString("Pad area - 100 mm^{2}"));
+  padArea->Add(new TObjString("A"), new TObjString("Gain area - 6.25 mm^{2}"));
+  padArea->Add(new TObjString("B"), new TObjString("Gain area - 25 mm^{2}"));
+  padArea->Add(new TObjString("C"), new TObjString("Gain area - 100 mm^{2}"));
   
   TIter iter(padArea->MakeIterator());
   for(auto dict = iter.Next(); dict != nullptr; dict = iter.Next())
@@ -172,7 +172,7 @@ void analyzeSlappPads(const char *pad, const char *area)
 	  cout<<"\033[1;32m Processing File (LGAD): "<<tctFiles[k]<<"\033[0m"<<endl;
 	  AnalyzeTCTData *lgad = new AnalyzeTCTData(tctFiles[k], 5);
 	  lgad->SetAveragesInOscilloscope(256);
-	  lgad->SetIntegralLimits(0, 50.);
+	  lgad->SetIntegralLimits(0, 30.);
 	  lgad->CorrectBaseline();
 	  lgad->CalcNoise();
 	  lgad->CalculateWaveformProperties();
@@ -181,7 +181,7 @@ void analyzeSlappPads(const char *pad, const char *area)
 	  cout<<"\033[1;32m Processing File (NOISE): "<<tctFiles[k+1]<<"\033[0m"<<endl;
 	  AnalyzeTCTData *noise = new AnalyzeTCTData(tctFiles[k+1], 7.2);
 	  noise->SetAveragesInOscilloscope(0);
-	  noise->SetIntegralLimits(0, 50.);
+	  noise->SetIntegralLimits(0, 30.);
 	  noise->CorrectBaseline();
 	  noise->CalcNoise();
 	  noise->CalculateWaveformProperties();
@@ -190,7 +190,7 @@ void analyzeSlappPads(const char *pad, const char *area)
 	  cout<<"\033[1;32m Processing File (PIN): "<<tctFiles[k+2]<<"\033[0m"<<endl;
 	  AnalyzeTCTData *pin = new AnalyzeTCTData(tctFiles[k+2], 0.9);
 	  pin->SetAveragesInOscilloscope(256);
-	  pin->SetIntegralLimits(0, 50.);
+	  pin->SetIntegralLimits(0, 30.);
 	  pin->CorrectBaseline();
 	  pin->CalcNoise();
 	  pin->CalculateWaveformProperties();
@@ -267,11 +267,16 @@ void analyzeSlappPads(const char *pad, const char *area)
 	      chargeErr[i] = lgad->_sigChargeError[0][i];
 
 	      // Calculate and store the signal to noise ratio
-	      snr[i] = amp[i]/noiseSig[i];
+	      //snr[i] = amp[i]/noiseSig[i];
+	      snr[i] = amp[i]/ampErr[i];
 
 	      // Evaluate gain of the sensor
 	      gain[i] = lgad->_sigNormCharge[0][i]/avgQ;
 	      gainErr[i] = gain[i]*TMath::Sqrt(TMath::Power(lgad->_sigChargeError[0][i]/lgad->_sigNormCharge[0][i],2)+TMath::Power(errAvg/avgQ,2));
+
+	      //gain[i] = lgad->_sigNormCharge[0][i]/pin->_sigNormCharge[0][i];
+	      //gainErr[i] = gain[i] * TMath::Sqrt(TMath::Power(lgad->_sigChargeError[0][i]/lgad->_sigNormCharge[0][i], 2) + TMath::Power(pin->_sigChargeError[0][i]/pin->_sigNormCharge[0][i], 2));
+	      
 	      
 	      if( i>=20 && i%5==0)
 		{
@@ -365,6 +370,9 @@ void analyzeSlappPads(const char *pad, const char *area)
 	      JitterError[k/3][i] = (Jitter[k/3][i]/ lgad->_sigSlewRate[0][i]) * lgad->_sigSlewRateError[0][i];
 	      Gain[k/3][i] = lgad->_sigNormCharge[0][i]/avgQ;
 	      GainError[k/3][i] = Gain[k/3][i]*TMath::Sqrt(TMath::Power(lgad->_sigChargeError[0][i]/lgad->_sigNormCharge[0][i],2)+TMath::Power(errAvg/avgQ,2));
+	      //Gain[k/3][i] = lgad->_sigNormCharge[0][i]/pin->_sigNormCharge[0][i];
+	      //GainError[k/3][i] = Gain[k/3][i] * TMath::Sqrt(TMath::Power(lgad->_sigChargeError[0][i]/lgad->_sigNormCharge[0][i], 2) + TMath::Power(pin->_sigChargeError[0][i]/pin->_sigNormCharge[0][i], 2));
+	      
 	      //Store Signal at 240 V
 	      if(i*stepL == 240)
 		{
@@ -598,7 +606,7 @@ void analyzeSlappPads(const char *pad, const char *area)
 	    legC->AddEntry(grC, legend, "epl");
 
 	  canSNR->cd();
-	  histJ[3]->GetYaxis()->SetRangeUser(0,1);
+	  histJ[3]->GetYaxis()->SetRangeUser(0,100);
 	  histJ[3]->GetXaxis()->SetRangeUser(0,610);
 	  if(type=="1")
 	    legSNR->AddEntry(grSNR, legend, "epl");
